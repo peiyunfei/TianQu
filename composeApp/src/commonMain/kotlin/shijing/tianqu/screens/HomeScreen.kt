@@ -6,37 +6,75 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import shijing.tianqu.router.RouteContext
+import shijing.tianqu.router.RouteTransition
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
 
-@Router(path = "/home")
+// 定义一个用于演示对象传递的数据类
+data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Router(
+    path = "/home",
+    enterTransition = RouteTransition.Slide,
+    exitTransition = RouteTransition.Slide
+)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(context: RouteContext) {
     val navigator = LocalNavigator.current
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "🏠 首页",
-            style = MaterialTheme.typography.headlineLarge
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "欢迎使用 KMP 路由框架！",
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(onClick = { navigator.navigateTo("/profile") }) {
-            Text("前往个人资料页")
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("首页") })
         }
-        Spacer(modifier = Modifier.height(12.dp))
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "🏠 首页",
+                style = MaterialTheme.typography.headlineLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "当前 URL: ${context.url}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Button(onClick = { navigator.navigateTo("/settings") }) {
-            Text("前往设置页")
+            Button(onClick = { 
+                // 演示传递复杂对象参数：
+                // 实例化一个业务对象，并通过 navigator.navigateTo 方法的 extra 参数进行传递。
+                // 这种方式不需要将对象序列化进 URL 字符串中，非常适合在同一个应用内传递大数据。
+                val userProfile = UserProfile(name = "Kotlin开发者", age = 25, isVip = true)
+                navigator.navigateTo("/profile", extra = userProfile) 
+            }) {
+                Text("前往个人资料页 (带对象参数)")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(onClick = { navigator.navigateTo("/settings") }) {
+                Text("前往设置页")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 演示参数化路由
+            Button(onClick = { navigator.navigateTo("/user/1001") }) {
+                Text("前往用户 1001 详情")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 演示查询参数和深层链接格式
+            Button(onClick = { navigator.navigateTo("app://shijing.tianqu/user/999?source=home_banner&vip=true") }) {
+                Text("打开深层链接 (带查询参数)")
+            }
         }
     }
 }
