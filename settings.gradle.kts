@@ -29,3 +29,6 @@ dependencyResolutionManagement {
 }
 
 include(":composeApp")
+include(":router-annotations")
+include(":router-processor")
+include(":router-runtime")
