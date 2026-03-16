@@ -24,20 +24,94 @@ class RouterProcessor(
         // 为了方便在控制台排查注解处理器的问题，这里使用 warn 来打印调试信息。
         logger.warn("----> RouterProcessor start processing <----")
         
-        // 查找所有带 @Router 的符号
-        val symbols = resolver.getSymbolsWithAnnotation(Router::class.qualifiedName ?: "")
-        // 我们只处理函数 (KSFunctionDeclaration)
-        val functionDeclarations = symbols.filterIsInstance<KSFunctionDeclaration>()
-        
-        // 过滤出解析完成的符号
+        val deferredSymbols = mutableListOf<KSAnnotated>()
+
+        // 查找所有带 @Router 的符号并生成路由表
+        val routerSymbols = resolver.getSymbolsWithAnnotation(Router::class.qualifiedName ?: "")
+        val functionDeclarations = routerSymbols.filterIsInstance<KSFunctionDeclaration>()
         val validFunctions = functionDeclarations.filter { it.validate() }.toList()
-        val deferredSymbols = functionDeclarations.filterNot { it.validate() }.toList()
+        deferredSymbols.addAll(functionDeclarations.filterNot { it.validate() })
 
         if (validFunctions.isNotEmpty()) {
             generateRouteRegistry(validFunctions)
         }
 
+        // 查找所有带 @Service 的符号并生成服务表 (实现模块间通信)
+        val serviceSymbols = resolver.getSymbolsWithAnnotation("shijing.tianqu.router.Service")
+        val classDeclarations = serviceSymbols.filterIsInstance<KSClassDeclaration>()
+        val validClasses = classDeclarations.filter { it.validate() }.toList()
+        deferredSymbols.addAll(classDeclarations.filterNot { it.validate() })
+
+        if (validClasses.isNotEmpty()) {
+            generateServiceRegistry(validClasses)
+        }
+
         return deferredSymbols
+    }
+
+    private fun generateServiceRegistry(classes: List<KSClassDeclaration>) {
+        val packageName = "shijing.tianqu.router.generated"
+        val className = "ServiceRegistry"
+
+        // 构建 Map 的类型：Map<KClass<*>, () -> Any>
+        val kClassType = ClassName("kotlin.reflect", "KClass").parameterizedBy(STAR)
+        val anyType = ClassName("kotlin", "Any")
+        val functionType = LambdaTypeName.get(returnType = anyType)
+        val mapType = ClassName("kotlin.collections", "Map").parameterizedBy(kClassType, functionType)
+
+        val initBlock = CodeBlock.builder()
+            .add("mapOf(\n")
+            .indent()
+
+        classes.forEachIndexed { index, ksClass ->
+            // 获取该类实现的第一个接口作为注册的 Key
+            val superType = ksClass.superTypes.firstOrNull()?.resolve()
+            val superDeclaration = superType?.declaration as? KSClassDeclaration
+            
+            if (superDeclaration != null && superDeclaration.classKind == ClassKind.INTERFACE) {
+                val interfaceName = ClassName(
+                    superDeclaration.packageName.asString(),
+                    superDeclaration.simpleName.asString()
+                )
+                
+                val implClassName = ClassName(
+                    ksClass.packageName.asString(),
+                    ksClass.simpleName.asString()
+                )
+
+                val comma = if (index < classes.size - 1) ",\n" else "\n"
+                initBlock.add(
+                    "%T::class to { %T() }%L",
+                    interfaceName,
+                    implClassName,
+                    comma
+                )
+            } else {
+                logger.warn("Class ${ksClass.simpleName.asString()} annotated with @Service must implement at least one interface.")
+            }
+        }
+
+        initBlock.unindent().add(")")
+
+        val propertySpec = PropertySpec.builder("services", mapType)
+            .initializer("%L", initBlock.build())
+            .build()
+
+        val typeSpec = TypeSpec.objectBuilder(className)
+            .addProperty(propertySpec)
+            .build()
+
+        val fileSpec = FileSpec.builder(packageName, className)
+            .addType(typeSpec)
+            .build()
+
+        try {
+            val dependencies = Dependencies(aggregating = true, *classes.mapNotNull { it.containingFile }.toTypedArray())
+            fileSpec.writeTo(codeGenerator, dependencies)
+            logger.warn("----> Generated ServiceRegistry successfully with ${classes.size} services. <----")
+        } catch (e: Exception) {
+            logger.error("Error generating ServiceRegistry: ${e.message}")
+        }
     }
 
     private fun generateRouteRegistry(functions: List<KSFunctionDeclaration>) {

@@ -10,6 +10,9 @@ import shijing.tianqu.router.RouteContext
 import shijing.tianqu.router.RouteTransition
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
+import shijing.tianqu.runtime.ServiceManager
+import shijing.tianqu.services.UserService
+import shijing.tianqu.featureb.FeatureBManager
 
 // 定义一个用于演示对象传递的数据类
 data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
@@ -42,6 +45,18 @@ fun HomeScreen(context: RouteContext) {
                 style = MaterialTheme.typography.headlineLarge
             )
             Spacer(modifier = Modifier.height(16.dp))
+
+            // 演示模块间通信：通过接口获取服务实现
+            val userService = ServiceManager.getService(UserService::class) as? UserService
+            val userName = userService?.getUserName() ?: "未知用户"
+
+            Text(
+                text = "欢迎您, $userName (来自 UserService)",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = "当前 URL: ${context.url}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -74,6 +89,15 @@ fun HomeScreen(context: RouteContext) {
             // 演示查询参数和深层链接格式
             Button(onClick = { navigator.navigateTo("app://shijing.tianqu/user/999?source=home_banner&vip=true") }) {
                 Text("打开深层链接 (带查询参数)")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 演示模块间反向通信：composeApp(上层)依赖feature-b(底层)
+            // 点击此按钮，调用 feature-b 中的逻辑，feature-b 再通过接口回调 composeApp 的实现
+            Button(onClick = {
+                FeatureBManager.doSomethingAndTrack()
+            }) {
+                Text("触发 Feature B 逻辑 (依赖反转通信)")
             }
         }
     }

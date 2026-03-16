@@ -10,8 +10,11 @@ import shijing.tianqu.router.generated.RouteRegistry
 
 import shijing.tianqu.runtime.RouterHost
 import shijing.tianqu.runtime.rememberNavigator
+import shijing.tianqu.runtime.ServiceManager
+import shijing.tianqu.router.generated.ServiceRegistry
 
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +35,11 @@ fun App() {
                 }
             }
         )
+    }
+
+    // 初始化 ServiceManager (模块间通信)
+    LaunchedEffect(Unit) {
+        ServiceManager.init(ServiceRegistry.services)
     }
 
     // 初始化导航器实例，传入 KSP 生成的全局路由表和拦截守卫，并指定首页路径

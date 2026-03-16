@@ -44,6 +44,7 @@ kotlin {
             // 路由框架依赖
             implementation(project(":router-annotations"))
             implementation(project(":router-runtime"))
+            implementation(project(":feature-b"))
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
