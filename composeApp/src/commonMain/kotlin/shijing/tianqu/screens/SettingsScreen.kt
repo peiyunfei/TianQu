@@ -60,21 +60,34 @@ fun SettingsScreen(context: RouteContext) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { navigator.popBackStack() },
+                onClick = { navigator.popBackStack(result = "Settings Saved Successfully!") },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
-                Text("返回上一页")
+                Text("返回并保存设置")
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
             Button(
                 onClick = {
-                    // 演示直接回到根节点
-                    navigator.popToRoot()
-                }
+                    // 演示直接退回到首页，可用于跳过多级中间页面
+                    navigator.popUntil("/home")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("回到首页 (PopToRoot)")
+                Text("退回到首页 (popUntil)")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    // 演示替换当前栈顶，返回时不会再经过原页面
+                    navigator.replace("/user/999")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Text("替换为用户页 (replace)")
             }
         }
     }

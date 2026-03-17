@@ -75,8 +75,27 @@ fun HomeScreen(context: RouteContext) {
             }
             Spacer(modifier = Modifier.height(12.dp))
 
+            // 演示从上一个页面获取返回的 result 数据
+            val returnedResult = context.result as? String
+            if (returnedResult != null) {
+                Text(
+                    text = "接收到返回结果: $returnedResult",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Button(onClick = { navigator.navigateTo("/settings") }) {
-                Text("前往设置页")
+                Text("前往设置页 (带返回结果演示)")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = { navigator.navigateTo("/not_exist_page") },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("跳转未知路由 (测试全局降级)")
             }
             Spacer(modifier = Modifier.height(12.dp))
             

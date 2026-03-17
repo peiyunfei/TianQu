@@ -13,13 +13,25 @@ data class RouteContext(
     val url: String,
     val pathParams: Map<String, String> = emptyMap(),
     val queryParams: Map<String, List<String>> = emptyMap(),
-    val extra: Any? = null
+    val extra: Any? = null,
+    
+    /**
+     * 页面返回结果
+     */
+    val result: Any? = null
 )
 
 /**
  * 路由守卫接口，采用责任链模式
  */
 interface RouteGuard {
+    /**
+     * 匹配当前路由是否需要执行此拦截器
+     * @param context 目标路由的上下文信息
+     * @return 默认返回 true，表示全局拦截。若只想拦截部分路由，可重写此方法进行判断（局部拦截）。
+     */
+    fun matches(context: RouteContext): Boolean = true
+
     /**
      * 决定是否可以进入该路由
      *

@@ -23,14 +23,18 @@ import androidx.compose.ui.Modifier
 @Composable
 @Preview
 fun App() {
-    // 示例：创建一个简单的全局路由守卫
-    // 可以拦截需要登录才能访问的页面，例如判断 token 是否过期等
+    // 示例：创建一个简单的局部路由守卫（只拦截特定路由）
     val guards = remember {
         listOf(
             object : RouteGuard {
+                // 重写 matches 方法，实现局部拦截
+                override fun matches(context: RouteContext): Boolean {
+                    // 仅当跳转到带有 /user 的路径时才触发此守卫
+                    return context.url.startsWith("/user")
+                }
+
                 override suspend fun canActivate(context: RouteContext, chain: GuardChain): Boolean {
-                    // 这里可以添加异步逻辑：比如判断路径是否为 "/settings"，模拟请求网络验证权限等
-                    // println("RouteGuard checking: ${context.url}")
+                    println("🚀 [局部拦截器] 发现正在尝试进入 User 模块，URL: ${context.url}")
                     return chain.proceed(context) // 放行并交给下一个守卫
                 }
             }
@@ -42,16 +46,27 @@ fun App() {
         ServiceManager.init(ServiceRegistry.services)
     }
 
-    // 初始化导航器实例，传入 KSP 生成的全局路由表和拦截守卫，并指定首页路径
+    // 存储由于降级产生的信息
+    var notFoundRoute by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+
+    // 初始化导航器实例，传入 KSP 生成的全局路由表和拦截守卫，并指定首页路径为嵌套路由容器 /main_tab
     val navigator = rememberNavigator(
         routes = RouteRegistry.routers,
-        startRoute = "/home",
-        guards = guards // 注册路由守卫
+        startRoute = "/main_tab",
+        guards = guards,
+        onRouteNotFound = { url ->
+            println("⚠️ [全局降级] 找不到路由: $url")
+            notFoundRoute = url
+        }
     )
 
-    // 处理系统返回键（拦截返回事件，当栈内页面大于1时出栈，否则走系统默认行为退出应用）
-    BackHandler(enabled = navigator.backStack.size > 1) {
-        navigator.popBackStack()
+    // 监听 notFoundRoute 的变化，通过 navigator 跳转到预设的通用错误页或 H5
+    LaunchedEffect(notFoundRoute) {
+        notFoundRoute?.let { url ->
+            // 这里为了演示，我们先跳转回首页，实际业务中可以跳转到 /404 页面
+            navigator.navigateTo("/main_tab")
+            notFoundRoute = null
+        }
     }
 
     MaterialTheme {

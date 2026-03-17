@@ -26,18 +26,31 @@ val LocalNavigator = compositionLocalOf<Navigator> {
  *
  * @param routes 由 KSP 生成的路由节点列表（通常为 RouteRegistry.routers）
  * @param startRoute 应用程序的初始路由地址（例如 "/home"）
- * @param guards 可选的全局路由守卫列表，用于在导航发生时进行拦截和鉴权
+ * @param guards 可选的路由守卫列表，可以通过重写 guard.matches 来实现局部拦截
+ * @param onRouteNotFound 路由降级回调，当未找到匹配路由时触发
+ * @param parent 父级 Navigator（用于嵌套路由中的事件向上传递），默认为当前上下文中的 LocalNavigator
  * @return 返回管理导航栈状态的 Navigator 实例
  */
 @Composable
 fun rememberNavigator(
     routes: List<RouteNode>,
     startRoute: String,
-    guards: List<RouteGuard> = emptyList()
+    guards: List<RouteGuard> = emptyList(),
+    onRouteNotFound: ((String) -> Unit)? = null,
+    parent: Navigator? = null // 默认可以是 null，如果想要自动从 CompositionLocal 取，可以放在调用方或者用 LocalNavigator.current 但要注意它可能未提供
 ): Navigator {
+    // 尝试获取父级 Navigator（如果处于嵌套环境中且没有显式传 parent，由于 LocalNavigator 有默认 error，我们无法安全判断是否提供，因此最好依赖上层显式传参，或捕获异常）
+    // 为了安全，默认依赖参数传入 parent
+    
     val coroutineScope = rememberCoroutineScope()
-    val navigator = remember(routes, guards, coroutineScope) {
-        Navigator(routes, guards, coroutineScope)
+    val navigator = remember(routes, guards, onRouteNotFound, parent, coroutineScope) {
+        Navigator(
+            routeRegistry = routes,
+            guards = guards,
+            onRouteNotFound = onRouteNotFound,
+            parent = parent,
+            coroutineScope = coroutineScope
+        )
     }
     
     LaunchedEffect(navigator, startRoute) {
@@ -59,7 +72,15 @@ fun RouterHost(
     navigator: Navigator,
     modifier: Modifier = Modifier
 ) {
-    val isPop = navigator.lastAction == NavigationAction.POP || navigator.lastAction == NavigationAction.POP_TO_ROOT
+    val isPop = navigator.lastAction == NavigationAction.POP ||
+                navigator.lastAction == NavigationAction.POP_TO_ROOT ||
+                navigator.lastAction == NavigationAction.POP_UNTIL
+
+    // 自动处理返回键逻辑，允许嵌套路由也能响应返回
+    // 只有当栈内有超过1个页面时，才由当前 Navigator 消耗返回事件
+    shijing.tianqu.BackHandler(enabled = navigator.backStack.size > 1) {
+        navigator.popBackStack()
+    }
 
     CompositionLocalProvider(LocalNavigator provides navigator) {
         Box(modifier = modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
