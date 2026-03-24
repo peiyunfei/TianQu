@@ -234,137 +234,250 @@ fun RouterHost(
 
 ---
 
-## 7. 真实业务场景推演：进出详情页到底发生了什么？
+## 7. 真实业务场景推演：基于日志验证的执行轨迹
 
-为了让上述复杂的逻辑更容易被理解，我们用一个**真实的业务场景**来演示这几行关键代码在底层到底发生了什么。
+为了彻底弄懂 `RouterHost` 的运转逻辑，我们结合真实的日志输出来一行行分析代码的执行情况。这也是 Compose 响应式重组（Recomposition）机制最真实的体现。
 
-假设你的 App 正在运行，这里有两个页面：
-- **`HomeScreen`** (主页，里面有一个可以滚动的很长的列表)
-- **`DetailScreen`** (详情页)
+我们在 `RouteHost.kt` 中关键位置打上日志：
+- 在 `RouterHost` 函数第一行打上 `println("yunfei RouterHost")`
+- 在 `CompositionLocalProvider` 之前打上 `println("yunfei CompositionLocalProvider")`
+- 在 `CompositionLocalProvider` 里面，`LaunchedEffect` 之后打上 `println("yunfei -------------------------------------------------------")`
+- 在 `LaunchedEffect(navigator.backStack)` 内部打上 `println("yunfei LaunchedEffect")`
 
-### 场景一：从主页前进到详情页 (PUSH)
+### 阶段一：第一次启动，进入首页 (Start)
 
-**用户的操作**：
-1. 用户在 `HomeScreen` 把列表向下滑动了 500 个像素。
-2. 用户点击了列表里的一项，触发跳转代码：`navigator.navigateTo("/detail")`。
-
-**底层代码的反应**：
-```kotlin
-// 此时 navigator.lastAction 被设置为 NavigationAction.PUSH
-val isPop = false // 因为不是后退，所以 isPop 为 false
-
-// backStack 里本来只有 [HomeScreen]，现在变成了 [HomeScreen, DetailScreen]
-// currentEntry 拿到了栈顶元素：DetailScreen
-val currentEntry = navigator.backStack.lastOrNull()
+**日志输出**：
+```text
+2026-03-24 23:10:48.776 I yunfei RouterHost
+2026-03-24 23:10:48.778 I yunfei CompositionLocalProvider
+2026-03-24 23:10:48.778 I yunfei -------------------------------------------------------
+2026-03-24 23:10:48.850 I yunfei LaunchedEffect
+2026-03-24 23:10:48.861 I yunfei RouterHost
+2026-03-24 23:10:48.861 I yunfei CompositionLocalProvider
+2026-03-24 23:10:48.861 I yunfei -------------------------------------------------------
 ```
 
-此时 `AnimatedContent` 开始工作，因为页面要切换了：
-```kotlin
-transitionSpec = {
-    // 发现是进场（PUSH），isPop 为 false
-    val enterAnim = slideInHorizontally(新页面从右边滑入)
-    val exitAnim = fadeOut(旧页面在原地不动，慢慢变暗)
-    
-    // ZIndex 设置为 1f，新页面 (DetailScreen) 会盖在旧页面 (HomeScreen) 上面滑进来
-    targetContentZIndex = 1f
-}
-```
+**逐行代码执行分析与原因**：
 
-重点来了，渲染层发生了什么？
-```kotlin
-{ entry -> // 这里的 entry 是指 AnimatedContent 正在处理的页面（HomeScreen 和 DetailScreen 都会走一遍这个逻辑）
-    
-    // 此时两个页面都还在 backStack 里
-    if (navigator.backStack.contains(entry)) {
-        
-        // 当渲染 HomeScreen 时，saveableStateHolder 发现 HomeScreen 不在屏幕最前面了，
-        // 于是它把 HomeScreen "列表滑动了 500 像素" 这个状态给打包缓存到了内存里！
-        // 它的唯一凭证就是 entry.id
-        saveableStateHolder.SaveableStateProvider(entry.id) {
-            entry.node.composable(entry.context)
-        }
-    }
-}
-```
-**结果**：DetailScreen 顺利显示，HomeScreen 隐藏到了后台，但它滑动的 500 像素被 `SaveableStateHolder` 记住了。
+1. **第一次组件上树 (Initial Composition)**
+   ```kotlin
+   @Composable
+   fun RouterHost(navigator: Navigator, modifier: Modifier = Modifier) {
+       println("yunfei RouterHost") // 执行：首次调用 Composable 函数
+       // ...
+   ```
+   
+   这里有一个极其关键的细节！为什么第一次启动时 `yunfei RouterHost` 和 `CompositionLocalProvider` 会被打印**两次**，而 `LaunchedEffect` 只打印了**一次**？
+   我们来看 `App.kt` 和 `RouteHost.kt` 的初始化代码：
+   
+   ```kotlin
+   // App.kt
+   val navigator = rememberNavigator(startRoute = "/main_tab", ...)
+   
+   // RouteHost.kt (rememberNavigator内部)
+   LaunchedEffect(navigator, startRoute) {
+       if (navigator.backStack.isEmpty()) {
+           navigator.navigateTo(startRoute)
+       }
+   }
+   ```
+   
+   **第一帧渲染 (Initial Composition)：**
+   因为 `LaunchedEffect` 是异步执行的（等待协程调度），所以当 `RouterHost` **第一次**被调用并渲染时，`navigator.backStack` 确实还是**空**的！
+   此时 `RouterHost` 内部执行到了这里：
+   ```kotlin
+   println("yunfei RouterHost") // 第 1 次打印
+   // ...
+   val currentEntry = navigator.backStack.lastOrNull() // 此时是 null
+   // ...
+   LaunchedEffect(navigator.backStack) { ... } // 注册 Effect，等待执行
+   
+   CompositionLocalProvider(LocalNavigator provides navigator) {
+       println("yunfei CompositionLocalProvider") // 第 1 次打印
+       println("yunfei -------------------------------------------------------") // 第 1 次打印
+       // ...
+       if (currentEntry != null) {
+           // 此时 currentEntry 为 null，不满足条件，整个 AnimatedContent 被跳过，屏幕上什么都不画。
+       }
+   }
+   ```
+   
+   **异步回调与重组 (Recomposition)：**
+   紧接着，有两件异步的事情发生了：
+   1. `RouterHost` 内部的 `LaunchedEffect(navigator.backStack)` 被调度执行了，打印出：
+      ```kotlin
+      println("yunfei LaunchedEffect") // 第 1 次打印。此时 backStack 还是空的。
+      ```
+   2. `rememberNavigator` 里的 `LaunchedEffect` 协程启动了，执行了 `navigator.navigateTo("/main_tab")`！首页被 push 进栈，`navigator.backStack` 这个 `StateList` 发生了改变！这引发了 `RouterHost` 依赖 `backStack` 地方的**重组 (Recomposition)**。
+   
+   **第二帧重组分析：**
+   当 `backStack` 从空变成 `[HomeEntry]` 时，为什么又打印了一次 `RouterHost` 和 `CompositionLocalProvider`？
+   因为在 Compose 中，`navigator.backStack` 是一个 `SnapshotStateList`，而我们在 `RouterHost` 函数体中有一行代码读取了它：
+   ```kotlin
+   val currentEntry = navigator.backStack.lastOrNull()
+   ```
+   这一行直接暴露在 `RouterHost` 的最外层作用域中！当 `backStack` 改变时，Compose 追踪到了最外层的依赖，因此整个 `RouterHost` 函数被重新执行了一遍！
+   
+   ```kotlin
+   println("yunfei RouterHost") // 第 2 次打印，因为外层发生了重组
+   // ...
+   val currentEntry = navigator.backStack.lastOrNull() // 这次拿到了 HomeEntry！
+   // ...
+   
+   // 🚨 为什么没有第二次打印 LaunchedEffect？
+   // 因为 LaunchedEffect(navigator.backStack) 中的 key 是 navigator.backStack 这个 MutableList 对象。
+   // 它的引用地址没有变（只是里面加了一个元素），因此 Compose 认为 Key 没有改变，不会重新执行 Effect 内部闭包！
+   
+   CompositionLocalProvider(LocalNavigator provides navigator) {
+       println("yunfei CompositionLocalProvider") // 第 2 次打印
+       println("yunfei -------------------------------------------------------") // 第 2 次打印
+       
+       if (currentEntry != null) { // 此时不为空了！
+           AnimatedContent(...) { // 开始正式渲染主页的 UI
+               // ...
+           }
+       }
+   }
+   ```
+
+3. **异步执行 LaunchedEffect**
+   ```kotlin
+   LaunchedEffect(navigator.backStack) {
+       println("yunfei LaunchedEffect") // 执行：Compose 在重组完成后，会在指定的协程中执行 LaunchedEffect 内部的代码。
+       
+       val currentEntryIds = navigator.backStack.map { it.id } // 此时只有 [Home_ID]
+       val poppedIds = savedEntryIds - currentEntryIds // poppedIds 为空，因为 savedEntryIds 也是空的
+       // ... (循环不执行)
+   }
+   ```
 
 ---
 
-### 场景二：从详情页返回主页 (POP)
+### 阶段二：从首页进入详情页 (PUSH)
 
-**用户的操作**：
-用户在 `DetailScreen` 看完了，按了手机的返回键，触发了：`navigator.popBackStack()`。
-
-**底层代码的反应**：
-```kotlin
-// 此时 navigator.lastAction 被设置为 NavigationAction.POP
-val isPop = true // 因为是返回操作！
-
-// backStack 里原本是 [HomeScreen, DetailScreen]，执行 pop 后变成了只有 [HomeScreen]
-// currentEntry 拿到了栈顶元素：HomeScreen
-val currentEntry = navigator.backStack.lastOrNull()
+**日志输出**：
+```text
+2026-03-24 23:11:38.686 I yunfei CompositionLocalProvider
+2026-03-24 23:11:38.686 I yunfei -------------------------------------------------------
 ```
+*(注意：这里没有打印 `yunfei RouterHost` 和 `yunfei LaunchedEffect`)*
 
-此时 `AnimatedContent` 再次开始工作，它发现你要显示 `HomeScreen` 了：
+**逐行代码执行分析与原因**：
+
+当用户触发 `navigator.navigateTo("/detail")` 时，`navigator.backStack` 增加了 `DetailEntry`。
+
+**为什么没打印 `yunfei RouterHost`？**
+因为 Compose 编译器进行了非常极致的**局部重组优化（Smart Recomposition）**。
+在 `RouterHost` 函数体中，最顶层的代码（比如 `println("yunfei RouterHost")`）读取的参数 `navigator` 实例本身并没有变（变的只是它里面的 `backStack` 列表里的元素）。
+Compose 发现：只有 `CompositionLocalProvider` 内部读取了 `navigator.backStack` （传递给了 `LaunchedEffect` 和隐式参与了内部逻辑）。所以 Compose **直接跳过了函数的外层，从内部开始重组**！
+
 ```kotlin
-transitionSpec = {
-    // 这次是退场（POP），isPop 为 true，动画方向完全反转！
-    val enterAnim = fadeIn(你要显示的 HomeScreen 在底层原地慢慢显现)
-    val exitAnim = slideOutHorizontally(要离开的 DetailScreen 向右侧滑出屏幕)
-    
-    // ZIndex 设置为 -1f！为什么要降级？
-    // 因为如果要离开的 DetailScreen 滑出时，新页面层级太高，DetailScreen 会瞬间被遮住，动画就看不到了。
-    // 所以把要显示的 HomeScreen 压在下面。
-    targetContentZIndex = -1f
-}
-```
+// 外面的代码被跳过了！Compose 知道它们没必要重新执行
 
-最复杂的内存处理开始：
-```kotlin
-// 这个 LaunchedEffect 监听到了 backStack 发生了变化！
-LaunchedEffect(navigator.backStack) {
-    // 当前栈里只有 [HomeScreen] 了
-    val currentEntryIds = ["home_id"]
+println("yunfei CompositionLocalProvider") // 执行：从这里开始发生局部重组
+CompositionLocalProvider(
+    LocalNavigator provides navigator
+) {
+    // LaunchedEffect(navigator.backStack) {...}  -> 这里代码不执行！
+    // 为什么不打印 yunfei LaunchedEffect？
+    // 因为虽然 backStack 里面的元素增加了，但 LaunchedEffect 监听的 `navigator.backStack` 对象引用并没有改变（它是一个 SnapshotStateList，增加元素不改变本身地址）。
+    // 在 Compose 中，如果是 mutableStateListOf，只要它的元素发生改变（增删），读取它的作用域就会重组。
+    // 但是，LaunchedEffect(key1) 中的 key1 需要发生对象级别的 equals() 不等才会重新触发内部闭包。
+    // 由于 navigator.backStack 这个 MutableList 对象的引用始终是同一个，LaunchedEffect 认为 "Key 没变"，所以内部代码不执行！
+    // 这是一个常见的 Compose 行为。如果我们希望 LaunchedEffect 每次增加页面都执行，它的 key 应该传 navigator.backStack.toList()。
+    // 幸好，在 PUSH 操作时，我们本来就不需要清理状态（poppedIds 是空的），所以它没执行也没有引入 Bug。
     
-    // 历史记录里有 ["home_id", "detail_id"]
-    // 找差集：poppedIds = ["detail_id"] （系统发现了：哦，原来是详情页被关掉了）
-    val poppedIds = savedEntryIds - currentEntryIds
-
-    poppedIds.forEach { id ->
-        // 【关键】从内存中彻底删除 DetailScreen 之前存过的所有 UI 状态（比如它内部的输入框文字）。
-        // 否则你下次看另外一篇文章的详情时，还会带着这次输入的废旧文字。
-        saveableStateHolder.removeState(id)
-    }
-}
-```
-
-这时候渲染层在做最后的挣扎：
-```kotlin
-{ entry ->
-    // 此时 AnimatedContent 正在同时渲染 HomeScreen（进）和 DetailScreen（退）
+    println("yunfei -------------------------------------------------------") // 执行
     
-    if (navigator.backStack.contains(entry)) {
-        // 对于 HomeScreen 来说，它在栈里。
-        // 它向 saveableStateHolder 要状态："嘿，我有 home_id，把我之前存的数据还给我！"
-        // 于是，它的列表瞬间自动恢复到了之前向下滑动了 500 像素的位置。完全没有重新刷新的感觉！
-        saveableStateHolder.SaveableStateProvider(entry.id) {
-            entry.node.composable(entry.context)
+    AnimatedContent(...) { entry ->
+        // 执行：这里会调用两遍！
+        // 一遍给处于栈底的 HomeEntry（开始渐隐动画，保存状态）
+        // 一遍给新压入栈顶的 DetailEntry（开始滑入动画，创建新状态容器）
+        if (navigator.backStack.contains(entry)) {
+             saveableStateHolder.SaveableStateProvider(entry.id) { ... }
         }
-    } else {
-        // 对于 DetailScreen 来说，它已经被弹出了，它已经不在栈里了。
-        // 但是它现在正在播放向右滑出的动画（需要大概 300 毫秒）。
-        // 这 300 毫秒内它不能死，必须画出来。
-        // 【离场保护】：我们只画它，但不给它套 SaveableStateProvider，
-        // 否则会把它刚才被 LaunchedEffect 删掉的垃圾状态又保存回去，导致严重 Bug。
-        entry.node.composable(entry.context)
     }
 }
 ```
 
-### 业务价值结论
-如果没有 `RouterHost` 里这几百行复杂的代码，用最普通的写法去写 Compose 页面切换，用户看到的灾难将是：
-1. 从详情返回主页时，主页重新从服务器加载了一次，列表瞬间跳回了最顶部。
-2. 动画很生硬，因为 Compose 默认渲染时不能感知你是"往前走"还是"往后退"。
-3. 反复进出详情页，内存不断增加，直到崩溃。
+---
 
-这就是 `RouterHost` 的核心价值：**让声明式的 Compose 组件，拥有了堪比原生 Android 系统的页面栈生命周期和视觉体验。**
+### 阶段三：退出详情页，返回首页 (POP)
+
+**日志输出**：
+```text
+2026-03-24 23:12:16.334 I yunfei RouterHost
+2026-03-24 23:12:16.335 I yunfei CompositionLocalProvider
+2026-03-24 23:12:16.335 I yunfei -------------------------------------------------------
+```
+*(注意：这里打印了 `yunfei RouterHost`，但依然没打印 `yunfei LaunchedEffect`)*
+
+**逐行代码执行分析与原因**：
+
+当用户触发 `navigator.popBackStack()` 时，`navigator.lastAction` 被设置成了 `NavigationAction.POP`，随后 `backStack` 移除了 `DetailEntry`。
+
+```kotlin
+@Composable
+fun RouterHost(navigator: Navigator, modifier: Modifier = Modifier) {
+    println("yunfei RouterHost") // 为什么这次执行了？
+    // 因为这一次除了 backStack 变了，最关键的是 `navigator.lastAction` 变了！
+    // 之前一直是在做 PUSH，这一次变成了 POP。这个状态的改变导致 `val isPop = ...` 这一行的计算结果发生了改变，
+    // 触发了外层函数体的整体重组。
+    
+    val saveableStateHolder = rememberSaveableStateHolder() // 执行：因为 remember，直接返回之前缓存的实例
+    val isPop = navigator.lastAction == NavigationAction.POP // 执行：isPop 变成了 true！
+    val currentEntry = navigator.backStack.lastOrNull() // 执行：重新拿到 HomeEntry
+    
+    if (currentEntry == null) return // 不满足条件，继续
+    
+    println("yunfei CompositionLocalProvider") // 执行
+    CompositionLocalProvider(
+        LocalNavigator provides navigator
+    ) {
+        // LaunchedEffect(navigator.backStack) {...}
+        // 为什么依然没有打印 yunfei LaunchedEffect？
+        // 原因同上！navigator.backStack 对象的引用依然没变。所以 `LaunchedEffect` 认为 Key 没有改变，内部闭包没有被再次触发。
+        //
+        // 🚨【严重警示】🚨：
+        // 通过这里的日志分析，我们发现了一个代码中的潜藏逻辑漏洞：
+        // 在 POP 页面时，我们期望 LaunchedEffect 执行 `saveableStateHolder.removeState(id)` 来清理废弃内存。
+        // 但由于 `LaunchedEffect(navigator.backStack)` 的 Key 是一个固定引用的 MutableList，它实际上并没有再次触发执行！
+        // 这意味着：被 POP 出去的详情页的状态并没有被及时清理，发生了轻微的内存（状态）泄漏！
+        // （修复方案：应该改为 `LaunchedEffect(navigator.backStack.size)` 或者 `LaunchedEffect(currentEntry)` 才能在发生增删时准确触发）。
+        
+        println("yunfei -------------------------------------------------------") // 执行
+        
+        AnimatedContent(...) { entry ->
+            // 执行：再次调用两遍！
+            // 一遍给重回视野的 HomeEntry：
+            if (navigator.backStack.contains(entry)) { // 此时是 true
+                // 向 saveableStateHolder 索要之前缓存的状态，页面完美恢复原状
+                saveableStateHolder.SaveableStateProvider(entry.id) { ... }
+            }
+            
+            // 一遍给正在被踢出局、播放离场动画的孤儿 DetailEntry：
+            if (navigator.backStack.contains(entry)) { // 此时是 false！因为已被 pop 出栈
+                // 不执行
+            } else {
+                // 执行！(离场保护)
+                // 裸渲染这个残影，绝不能给它包裹 SaveableStateProvider
+                entry.node.composable(entry.context)
+            }
+        }
+    }
+}
+```
+
+### 总结日志带给我们的深刻启示：
+1. **第一次启动打印了两次 `RouterHost`**：证明 Compose 在处理异步初始状态时会发生快速的重组纠错（从 `currentEntry == null` 直接 `return`，到马上收到 `HomeEntry` 再次重组并开始渲染）。
+2. **PUSH 操作跳过了 `RouterHost` 顶层**：虽然我们在 `RouterHost` 最外层写了 `val currentEntry = navigator.backStack.lastOrNull()`，但在 PUSH 详情页时（尤其是如果这个 PUSH 发生在当前页面的点击事件中，而不是根 `RouterHost` 重组触发），如果 Compose 优化判断顶层没有重新读取会导致 UI 变化的参数，可能直接在内部的 `AnimatedContent` 进行局部重组。（注：这里如果在某些 Compose 版本中依然发生了外层重组但没打印日志，是因为外层重组被优化跳过了，这也证明了 Compose 编译器的强大）。
+3. **POP 操作恢复了 `RouterHost` 顶层执行**：因为 `navigator.lastAction` 从 `PUSH` 变成了 `POP`，影响了顶层代码 `val isPop = ...` 的值，所以触发了整体重组。
+4. **意料之外的 `LaunchedEffect` 不执行**：这也是日志分析带来的最大价值。由于将 `SnapshotStateList` 直接作为 `LaunchedEffect` 的 Key，导致内存清理逻辑并未如预期般在每次 `POP` 时执行。
+
+---
+
+### 总结：为什么必须要这样执行？
+
+1. **为什么需要 SaveableStateHolder？** Compose 的底层逻辑是纯函数渲染，UI 不在屏幕上（出组件树）它的局部状态（如输入框文字、列表滑动位置）就会全部丢失。借助它，页面才能表现得像原生的 Activity/Fragment 栈。
+2. **为什么需要动态调整 ZIndex？** 如果固定新页面在上，当你 `POP` 退栈时，底下的旧页面会突然跳到最顶层，直接盖住退栈页面的滑出动画，视觉上会闪烁断层。
+3. **为什么需要 backStack.contains 的离场保护？** `AnimatedContent` 的动画生命周期长于实际逻辑栈的生命周期。被踢出栈的页面在 UI 上变成了“孤魂野鬼”（还要活 300 毫秒），必须防范这 300 毫秒内由于组件状态变更而导致的幽灵状态存储。

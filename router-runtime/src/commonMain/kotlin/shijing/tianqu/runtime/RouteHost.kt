@@ -85,6 +85,7 @@ fun RouterHost(
     navigator: Navigator,
     modifier: Modifier = Modifier
 ) {
+    println("yunfei RouterHost")
     val isPop = navigator.lastAction == NavigationAction.POP ||
                 navigator.lastAction == NavigationAction.POP_TO_ROOT ||
                 navigator.lastAction == NavigationAction.POP_UNTIL
@@ -99,6 +100,7 @@ fun RouterHost(
     // 监听返回栈的变化，清理已经被移出栈的页面保存的状态
     // 如果某个 entry 的 id 不在当前的 backStack 中了，说明它已被 pop 出去了，此时彻底清理它的状态缓存
     LaunchedEffect(navigator.backStack) {
+        println("yunfei LaunchedEffect")
         val currentEntryIds = navigator.backStack.map { it.id }.toSet()
         
         // 找出所有在 savedEntryIds 中存在，但不再存在于 currentEntryIds 中的 key（被 pop 掉的页面）
@@ -115,6 +117,8 @@ fun RouterHost(
     }
 
     CompositionLocalProvider(LocalNavigator provides navigator) {
+        println("yunfei CompositionLocalProvider")
+        println("yunfei -------------------------------------------------------")
         Box(modifier = modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
             // 获取当前栈顶路由实体
             val currentEntry = navigator.backStack.lastOrNull()
