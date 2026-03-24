@@ -10,7 +10,7 @@ import shijing.tianqu.router.generated.RouteRegistry
 
 import shijing.tianqu.runtime.RouterHost
 import shijing.tianqu.runtime.rememberNavigator
-import shijing.tianqu.runtime.ServiceManager
+import shijing.tianqu.runtime.service.ServiceManager
 import shijing.tianqu.router.generated.ServiceRegistry
 
 import androidx.compose.runtime.remember
@@ -46,26 +46,25 @@ fun App() {
         ServiceManager.init(ServiceRegistry.services)
     }
 
-    // 存储由于降级产生的信息
-    var notFoundRoute by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
-
     // 初始化导航器实例，传入 KSP 生成的全局路由表和拦截守卫，并指定首页路径为嵌套路由容器 /main_tab
     val navigator = rememberNavigator(
         routes = RouteRegistry.routers,
         startRoute = "/main_tab",
-        guards = guards,
-        onRouteNotFound = { url ->
-            println("⚠️ [全局降级] 找不到路由: $url")
-            notFoundRoute = url
-        }
+        guards = guards
     )
 
-    // 监听 notFoundRoute 的变化，通过 navigator 跳转到预设的通用错误页或 H5
-    LaunchedEffect(notFoundRoute) {
-        notFoundRoute?.let { url ->
-            // 这里为了演示，我们先跳转回首页，实际业务中可以跳转到 /404 页面
-            navigator.navigateTo("/main_tab")
-            notFoundRoute = null
+    // 监听 Navigator 路由事件总线
+    LaunchedEffect(navigator) {
+        navigator.routeEvents.collect { event ->
+            when (event) {
+                is shijing.tianqu.runtime.RouteEvent.NotFound -> {
+                    println("⚠️ [全局事件总线] 拦截到未注册的路由: ${event.url}，重定向回 /main_tab")
+                    navigator.navigateTo("/main_tab")
+                }
+                is shijing.tianqu.runtime.RouteEvent.Navigated -> {
+                    println("ℹ️ [全局事件总线] 路由跳转成功: ${event.url} [${event.action}]")
+                }
+            }
         }
     }
 

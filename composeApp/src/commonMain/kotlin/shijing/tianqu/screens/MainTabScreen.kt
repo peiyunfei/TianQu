@@ -6,14 +6,13 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import shijing.tianqu.router.RouteContext
 import shijing.tianqu.router.RouteTransition
 import shijing.tianqu.router.Router
 import shijing.tianqu.router.generated.RouteRegistry
-import shijing.tianqu.runtime.LocalNavigator
-import shijing.tianqu.runtime.RouterHost
-import shijing.tianqu.runtime.rememberNavigator
 
 /**
  * 演示嵌套路由 (Nested Routing) 和底部导航栏。
@@ -25,23 +24,9 @@ import shijing.tianqu.runtime.rememberNavigator
 )
 @Composable
 fun MainTabScreen(context: RouteContext) {
-    val parentNavigator = LocalNavigator.current
-    
-    // 为 Home Tab 创建独立的子导航栈，并将 parent 设为全局 navigator
-    val homeNavigator = rememberNavigator(
-        routes = RouteRegistry.routers,
-        startRoute = "/home",
-        parent = parentNavigator
-    )
-    
-    // 为 Profile Tab 创建独立的子导航栈
-    val profileNavigator = rememberNavigator(
-        routes = RouteRegistry.routers,
-        startRoute = "/user/1001", // 这里借用 User 页面作为我的页面
-        parent = parentNavigator
-    )
-    
-    var selectedTab by remember { mutableStateOf(0) }
+
+    // 将 Tab 选中状态改为 rememberSaveable，防止后台被销毁时重置回首页
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
 
     Scaffold(
         bottomBar = {
@@ -61,13 +46,25 @@ fun MainTabScreen(context: RouteContext) {
             }
         }
     ) { paddingValues ->
+        // 核心：不使用多个 Navigator，而是用 SaveableStateHolder 在同一个页面下保持两个 Tab 的组合节点状态。
+        // 这是很多 Compose 底层导航库实现多 Tab 的标准轻量级方案：单宿主 + 多状态挂载点
+        val saveableStateHolder = rememberSaveableStateHolder()
+
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            // 使用 Box 和 if/else 来控制显示的 RouterHost
-            // 由于 Navigator 是 remember 缓存的，因此即使 RouterHost 移除组合，导航状态(backStack)也不会丢失。
+            // 通过 SaveableStateProvider 为每个 Tab 提供独立的 State 保存空间
+            // 当 selectedTab 变化时，前一个 tab 的组件会离开组合树，但其状态（由 key "tab_home" 保存）会被持久化
             if (selectedTab == 0) {
-                RouterHost(navigator = homeNavigator)
+                saveableStateHolder.SaveableStateProvider("tab_home") {
+                    // 动态获取对应的节点并执行渲染
+                    val homeNode = RouteRegistry.routers.find { it.path == "/home" }
+                    homeNode?.composable?.invoke(RouteContext("/home"))
+                }
             } else {
-                RouterHost(navigator = profileNavigator)
+                saveableStateHolder.SaveableStateProvider("tab_profile") {
+                    val profileNode = RouteRegistry.routers.find { it.path == "/user/{id}" }
+                    // 注意：这只是为了演示。在完整的路由框架里，Tab 的切换通常不直接用 /user/{id}，而是专门的 TabRoot 页面
+                    profileNode?.composable?.invoke(RouteContext("/user/1001", mapOf("id" to "1001")))
+                }
             }
         }
     }

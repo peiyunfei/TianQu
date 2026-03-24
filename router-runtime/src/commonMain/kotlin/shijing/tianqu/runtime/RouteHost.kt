@@ -5,12 +5,27 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import shijing.tianqu.router.RouteGuard
 import shijing.tianqu.router.RouteTransition
+
+import kotlinx.coroutines.CoroutineScope
+import shijing.tianqu.runtime.handler.RouterHandler
+
+/**
+ * 获取包含当前 Navigator 的协程作用域。
+ * 允许在任何挂起函数中通过 coroutineContext[Navigator] 拿到当前的导航器，
+ */
+@Composable
+fun rememberRouterScope(): CoroutineScope {
+    val navigator = LocalNavigator.current
+    val baseScope = rememberCoroutineScope()
+    return remember(baseScope, navigator) {
+        CoroutineScope(baseScope.coroutineContext + navigator)
+    }
+}
 
 /**
  * CompositionLocal 用于在组件树中向下传递 Navigator 实例，
@@ -27,7 +42,6 @@ val LocalNavigator = compositionLocalOf<Navigator> {
  * @param routes 由 KSP 生成的路由节点列表（通常为 RouteRegistry.routers）
  * @param startRoute 应用程序的初始路由地址（例如 "/home"）
  * @param guards 可选的路由守卫列表，可以通过重写 guard.matches 来实现局部拦截
- * @param onRouteNotFound 路由降级回调，当未找到匹配路由时触发
  * @param parent 父级 Navigator（用于嵌套路由中的事件向上传递），默认为当前上下文中的 LocalNavigator
  * @return 返回管理导航栈状态的 Navigator 实例
  */
@@ -36,18 +50,17 @@ fun rememberNavigator(
     routes: List<RouteNode>,
     startRoute: String,
     guards: List<RouteGuard> = emptyList(),
-    onRouteNotFound: ((String) -> Unit)? = null,
-    parent: Navigator? = null // 默认可以是 null，如果想要自动从 CompositionLocal 取，可以放在调用方或者用 LocalNavigator.current 但要注意它可能未提供
+    routerHandler: RouterHandler? = null,
+    parent: Navigator? = null
 ): Navigator {
-    // 尝试获取父级 Navigator（如果处于嵌套环境中且没有显式传 parent，由于 LocalNavigator 有默认 error，我们无法安全判断是否提供，因此最好依赖上层显式传参，或捕获异常）
-    // 为了安全，默认依赖参数传入 parent
-    
     val coroutineScope = rememberCoroutineScope()
-    val navigator = remember(routes, guards, onRouteNotFound, parent, coroutineScope) {
+    
+    // 改为 rememberSaveable 并自定义 Saver 以在配置更改时保持 Navigator 状态
+    val navigator = remember(routes, guards, routerHandler, parent, coroutineScope) {
         Navigator(
             routeRegistry = routes,
             guards = guards,
-            onRouteNotFound = onRouteNotFound,
+            routerHandler = routerHandler,
             parent = parent,
             coroutineScope = coroutineScope
         )
@@ -76,10 +89,29 @@ fun RouterHost(
                 navigator.lastAction == NavigationAction.POP_TO_ROOT ||
                 navigator.lastAction == NavigationAction.POP_UNTIL
 
-    // 自动处理返回键逻辑，允许嵌套路由也能响应返回
-    // 只有当栈内有超过1个页面时，才由当前 Navigator 消耗返回事件
-    shijing.tianqu.BackHandler(enabled = navigator.backStack.size > 1) {
-        navigator.popBackStack()
+    // 将 state holder 提升作用域或使用单一实例，确保 tab 切换等场景不被重置
+    // 由于 RouterHost 通常在全局只挂载一次，这里的 rememberSaveableStateHolder 是安全的
+    val saveableStateHolder = rememberSaveableStateHolder()
+    
+    // 维护一个记录所有出现过的 entry.id 的集合，用于比较哪些需要被清理
+    val savedEntryIds = remember { mutableSetOf<String>() }
+
+    // 监听返回栈的变化，清理已经被移出栈的页面保存的状态
+    // 如果某个 entry 的 id 不在当前的 backStack 中了，说明它已被 pop 出去了，此时彻底清理它的状态缓存
+    LaunchedEffect(navigator.backStack) {
+        val currentEntryIds = navigator.backStack.map { it.id }.toSet()
+        
+        // 找出所有在 savedEntryIds 中存在，但不再存在于 currentEntryIds 中的 key（被 pop 掉的页面）
+        val poppedIds = savedEntryIds - currentEntryIds
+        
+        // 移除它们保存的状态，这样下次再 push 同一个路径时，就是全新的状态而不是恢复之前的脏状态
+        poppedIds.forEach { id ->
+            saveableStateHolder.removeState(id)
+            savedEntryIds.remove(id)
+        }
+        
+        // 将当前栈里的新 id 添加到记录中
+        savedEntryIds.addAll(currentEntryIds)
     }
 
     CompositionLocalProvider(LocalNavigator provides navigator) {
@@ -87,12 +119,7 @@ fun RouterHost(
             // 获取当前栈顶路由实体
             val currentEntry = navigator.backStack.lastOrNull()
 
-            if (currentEntry == null) {
-                // 当栈为空时（比如初始异步导航还未完成），显示一个空白占位，避免画面闪烁
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Loading...")
-                }
-            } else {
+            if (currentEntry != null) {
                 // 使用 AnimatedContent 实现路由切换动画
                 AnimatedContent(
                     targetState = currentEntry,
@@ -136,8 +163,27 @@ fun RouterHost(
                     },
                     label = "route_transition"
                 ) { entry ->
-                    // 渲染实际页面，传入上下文参数
-                    entry.node.composable(entry.context)
+                    // 仅当 entry 没有被标记为已销毁时渲染其状态
+                    if (navigator.backStack.contains(entry)) {
+                        // 为当前页面提供基于 SaveableStateHolder 的状态保留
+                        saveableStateHolder.SaveableStateProvider(entry.id) {
+                            // 提供独立协程作用域并挂载到 entry
+                            val entryScope = rememberCoroutineScope()
+                            DisposableEffect(entry) {
+                                entry.scope = entryScope
+                                onDispose {
+                                    // 节点移除清理
+                                }
+                            }
+
+                            // 渲染实际页面
+                            entry.node.composable(entry.context)
+                        }
+                    } else {
+                        // 如果 entry 已经不再栈内（比如 pop 动画仍在执行），我们不使用 StateProvider，
+                        // 以免在清理后再次注册状态导致异常或内存泄漏
+                        entry.node.composable(entry.context)
+                    }
                 }
             }
         }

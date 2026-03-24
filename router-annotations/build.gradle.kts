@@ -3,7 +3,13 @@ plugins {
 }
 
 kotlin {
-    jvm()
+    jvm {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
     iosArm64()
     iosSimulatorArm64()
     

@@ -1,8 +1,15 @@
 package shijing.tianqu.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -10,7 +17,7 @@ import shijing.tianqu.router.RouteContext
 import shijing.tianqu.router.RouteTransition
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
-import shijing.tianqu.runtime.ServiceManager
+import shijing.tianqu.runtime.utils.rememberService
 import shijing.tianqu.services.UserService
 import shijing.tianqu.featureb.FeatureBManager
 
@@ -26,16 +33,25 @@ data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
 @Composable
 fun HomeScreen(context: RouteContext) {
     val navigator = LocalNavigator.current
+    
+    // 增加一个测试状态，用于验证切换回来时状态是否丢失
+    var testCounter by rememberSaveable { mutableStateOf(0) }
+    // 用于保存从设置页返回的结果（必须使用 rememberSaveable，否则从 Settings 返回后页面重组会导致状态重置为 null）
+    var returnedResult by rememberSaveable { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("首页") })
         }
     ) { paddingValues ->
+        // 为页面添加垂直滚动状态
+        val scrollState = rememberScrollState()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(scrollState)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -46,12 +62,12 @@ fun HomeScreen(context: RouteContext) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 演示模块间通信：通过接口获取服务实现
-            val userService = ServiceManager.getService(UserService::class) as? UserService
-            val userName = userService?.getUserName() ?: "未知用户"
+            // 演示模块间通信：使用最新支持协程的 rememberService() 自动挂起获取服务
+            val userService = rememberService<UserService>()
+            val userName = userService?.getUserName() ?: "正在异步加载服务..."
 
             Text(
-                text = "欢迎您, $userName (来自 UserService)",
+                text = "欢迎您, $userName (来自 Coroutine Service)",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -62,9 +78,19 @@ fun HomeScreen(context: RouteContext) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 测试状态保持的交互按钮
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("状态保持测试(计数值应保持不变): $testCounter", color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = { testCounter++ }) {
+                    Text("+1")
+                }
+            }
             Spacer(modifier = Modifier.height(32.dp))
 
-            Button(onClick = { 
+            Button(onClick = {
                 // 演示传递复杂对象参数：
                 // 实例化一个业务对象，并通过 navigator.navigateTo 方法的 extra 参数进行传递。
                 // 这种方式不需要将对象序列化进 URL 字符串中，非常适合在同一个应用内传递大数据。
@@ -75,8 +101,7 @@ fun HomeScreen(context: RouteContext) {
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 演示从上一个页面获取返回的 result 数据
-            val returnedResult = context.result as? String
+            // 演示通过协程获取返回的 result 数据（类似 Compose awaitFirstDown）
             if (returnedResult != null) {
                 Text(
                     text = "接收到返回结果: $returnedResult",
@@ -86,8 +111,29 @@ fun HomeScreen(context: RouteContext) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Button(onClick = { navigator.navigateTo("/settings") }) {
-                Text("前往设置页 (带返回结果演示)")
+            Button(onClick = {
+                // 使用 navigator 自带的长生命周期作用域，防止页面因离开组合树而取消协程
+                navigator.coroutineScope.launch {
+                    // 调用挂起函数，一直等待直到设置页 popBackStack 返回结果
+                    val result = navigator.awaitNavigateForResult("/settings")
+                    if (result is String) {
+                        returnedResult = "协程获取: $result"
+                    }
+                }
+            }) {
+                Text("前往设置页 (协程等待结果)")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(onClick = {
+                // 使用回调方式获取返回结果，适用于非协程环境 (如 Swift)
+                navigator.navigateWithResult("/settings").onResult { result ->
+                    if (result is String) {
+                        returnedResult = "回调获取: $result"
+                    }
+                }
+            }) {
+                Text("前往设置页 (回调获取结果)")
             }
             Spacer(modifier = Modifier.height(12.dp))
 

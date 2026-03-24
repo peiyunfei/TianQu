@@ -3,11 +3,8 @@ package shijing.tianqu.processor
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.*
 import com.google.devtools.ksp.validate
-import com.squareup.kotlinpoet.*
-import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.ksp.writeTo
-import shijing.tianqu.router.RouteContext
 import shijing.tianqu.router.Router
+import shijing.tianqu.router.Service
 
 /**
  * 路由符号处理器。
@@ -27,200 +24,26 @@ class RouterProcessor(
         val deferredSymbols = mutableListOf<KSAnnotated>()
 
         // 查找所有带 @Router 的符号并生成路由表
+        // 1. 策略：处理路由节点
         val routerSymbols = resolver.getSymbolsWithAnnotation(Router::class.qualifiedName ?: "")
         val functionDeclarations = routerSymbols.filterIsInstance<KSFunctionDeclaration>()
         val validFunctions = functionDeclarations.filter { it.validate() }.toList()
         deferredSymbols.addAll(functionDeclarations.filterNot { it.validate() })
 
         if (validFunctions.isNotEmpty()) {
-            generateRouteRegistry(validFunctions)
+            RouteRegistryGeneratorStrategy().generate(validFunctions, codeGenerator, logger)
         }
 
-        // 查找所有带 @Service 的符号并生成服务表 (实现模块间通信)
-        val serviceSymbols = resolver.getSymbolsWithAnnotation("shijing.tianqu.router.Service")
+        // 2. 策略：处理服务注入
+        val serviceSymbols = resolver.getSymbolsWithAnnotation(Service::class.qualifiedName ?: "")
         val classDeclarations = serviceSymbols.filterIsInstance<KSClassDeclaration>()
         val validClasses = classDeclarations.filter { it.validate() }.toList()
         deferredSymbols.addAll(classDeclarations.filterNot { it.validate() })
 
         if (validClasses.isNotEmpty()) {
-            generateServiceRegistry(validClasses)
+            ServiceRegistryGeneratorStrategy().generate(validClasses, codeGenerator, logger)
         }
 
         return deferredSymbols
-    }
-
-    private fun generateServiceRegistry(classes: List<KSClassDeclaration>) {
-        val packageName = "shijing.tianqu.router.generated"
-        val className = "ServiceRegistry"
-
-        // 构建 Map 的类型：Map<KClass<*>, () -> Any>
-        val kClassType = ClassName("kotlin.reflect", "KClass").parameterizedBy(STAR)
-        val anyType = ClassName("kotlin", "Any")
-        val functionType = LambdaTypeName.get(returnType = anyType)
-        val mapType = ClassName("kotlin.collections", "Map").parameterizedBy(kClassType, functionType)
-
-        val initBlock = CodeBlock.builder()
-            .add("mapOf(\n")
-            .indent()
-
-        classes.forEachIndexed { index, ksClass ->
-            // 获取该类实现的第一个接口作为注册的 Key
-            val superType = ksClass.superTypes.firstOrNull()?.resolve()
-            val superDeclaration = superType?.declaration as? KSClassDeclaration
-            
-            if (superDeclaration != null && superDeclaration.classKind == ClassKind.INTERFACE) {
-                val interfaceName = ClassName(
-                    superDeclaration.packageName.asString(),
-                    superDeclaration.simpleName.asString()
-                )
-                
-                val implClassName = ClassName(
-                    ksClass.packageName.asString(),
-                    ksClass.simpleName.asString()
-                )
-
-                val comma = if (index < classes.size - 1) ",\n" else "\n"
-                initBlock.add(
-                    "%T::class to { %T() }%L",
-                    interfaceName,
-                    implClassName,
-                    comma
-                )
-            } else {
-                logger.warn("Class ${ksClass.simpleName.asString()} annotated with @Service must implement at least one interface.")
-            }
-        }
-
-        initBlock.unindent().add(")")
-
-        val propertySpec = PropertySpec.builder("services", mapType)
-            .initializer("%L", initBlock.build())
-            .build()
-
-        val typeSpec = TypeSpec.objectBuilder(className)
-            .addProperty(propertySpec)
-            .build()
-
-        val fileSpec = FileSpec.builder(packageName, className)
-            .addType(typeSpec)
-            .build()
-
-        try {
-            val dependencies = Dependencies(aggregating = true, *classes.mapNotNull { it.containingFile }.toTypedArray())
-            fileSpec.writeTo(codeGenerator, dependencies)
-            logger.warn("----> Generated ServiceRegistry successfully with ${classes.size} services. <----")
-        } catch (e: Exception) {
-            logger.error("Error generating ServiceRegistry: ${e.message}")
-        }
-    }
-
-    private fun generateRouteRegistry(functions: List<KSFunctionDeclaration>) {
-        val packageName = "shijing.tianqu.router.generated"
-        val className = "RouteRegistry"
-
-        // 引入 Compose 的注解
-        val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
-        // 引入 RouteContext
-        val routeContextClass = ClassName("shijing.tianqu.router", "RouteContext")
-        // 引入 RouteTransition
-        val transitionClass = ClassName("shijing.tianqu.router", "RouteTransition")
-        
-        // 定义生成代码中的 RouteNode 数据类类型
-        val routeNodeType = ClassName("shijing.tianqu.runtime", "RouteNode")
-        
-        // 构建 List 的类型：List<RouteNode>
-        val listType = ClassName("kotlin.collections", "List").parameterizedBy(routeNodeType)
-
-        // 生成初始化 List 的代码块
-        val initBlock = CodeBlock.builder()
-            .add("listOf(\n")
-            .indent()
-
-        functions.forEachIndexed { index, func ->
-            val annotation = func.annotations.first {
-                it.shortName.asString() == Router::class.simpleName
-            }
-            // 获取注解中的参数
-            val pathArg = annotation.arguments.first { it.name?.asString() == "path" }
-            val pathValue = pathArg.value as String
-            
-            // 将 {id} 替换为正则表达式 ([\w-]+)，用于运行时匹配
-            val regexPattern = pathValue.replace(Regex("\\{[^/]+\\}"), "([\\\\w-]+)")
-            
-            // 获取枚举值 (默认值为 Slide)
-            // KSP 中枚举参数的值是一个 KSClassDeclaration，我们需要获取其简短名称
-            fun getEnumName(argName: String): String {
-                val arg = annotation.arguments.find { it.name?.asString() == argName }
-                val type = arg?.value as? KSType
-                return type?.declaration?.simpleName?.asString() ?: "Slide"
-            }
-            
-            val enterTransition = getEnumName("enterTransition")
-            val exitTransition = getEnumName("exitTransition")
-            
-            // 获取函数名和所在的包
-            val funcName = func.simpleName.asString()
-            val funcPackage = func.packageName.asString()
-            val funcClassName = ClassName(funcPackage, funcName)
-
-            val comma = if (index < functions.size - 1) ",\n" else "\n"
-            
-            // 构造 RouteNode 实例
-            // RouteNode(path, regexPattern, enterTransition, exitTransition, { context -> func(context) })
-            // 只有当目标函数接受 RouteContext 参数时才传递
-
-            val hasContextParam = func.parameters.any {
-                it.type.resolve().declaration.qualifiedName?.asString() == RouteContext::class.qualifiedName
-            }
-            
-            val composableCall = if (hasContextParam) {
-                "{ context -> %T(context) }"
-            } else {
-                "{ _ -> %T() }"
-            }
-
-            initBlock.add(
-                "RouteNode(\n" +
-                "    path = %S,\n" +
-                "    regexPattern = %S,\n" +
-                "    enterTransition = %T.%L,\n" +
-                "    exitTransition = %T.%L,\n" +
-                "    composable = $composableCall\n" +
-                ")%L",
-                pathValue,
-                "^$regexPattern\$", // 添加首尾匹配
-                transitionClass, enterTransition,
-                transitionClass, exitTransition,
-                funcClassName,
-                comma
-            )
-        }
-
-        initBlock.unindent().add(")")
-
-        // 创建 routers 属性
-        val propertySpec = PropertySpec.builder("routers", listType)
-            .initializer("%L", initBlock.build())
-            .build()
-
-        // 创建 RouteRegistry Object
-        val typeSpec = TypeSpec.objectBuilder(className)
-            .addProperty(propertySpec)
-            .build()
-
-        // 创建文件
-        val fileSpec = FileSpec.builder(packageName, className)
-            .addType(typeSpec)
-            .build()
-
-        try {
-            // 使用聚合依赖
-            val dependencies = Dependencies(aggregating = true, *functions.mapNotNull { it.containingFile }.toTypedArray())
-            fileSpec.writeTo(codeGenerator, dependencies)
-            // 使用 warn 来保证在 Gradle 默认控制台中能够看到成功的输出
-            logger.warn("----> Generated RouteRegistry successfully with ${functions.size} routes. <----")
-        } catch (e: Exception) {
-            logger.error("Error generating RouteRegistry: ${e.message}")
-        }
     }
 }

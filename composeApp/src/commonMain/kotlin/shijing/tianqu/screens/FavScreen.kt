@@ -5,10 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -24,25 +20,21 @@ import shijing.tianqu.runtime.LocalNavigator
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Router(
-    path = "/user/{id}",
+    path = "/fav",
     enterTransition = RouteTransition.Slide,
     exitTransition = RouteTransition.Slide
 )
 @Composable
-fun UserScreen(context: RouteContext) {
-
-    // 增加一个测试状态，用于验证切换回来时状态是否丢失
-    var testCounter by rememberSaveable { mutableStateOf(0) }
-
+fun FavScreen(context: RouteContext) {
     val navigator = LocalNavigator.current
     
     // 从上下文中提取由正则匹配出来的路径参数
-    val userId = context.pathParams["id"] ?: "Unknown"
+    val userId = context.pathParams["id"] ?: "未知"
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("用户详情") },
+                title = { Text("收藏") },
                 navigationIcon = {
                     IconButton(onClick = { navigator.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -97,20 +89,9 @@ fun UserScreen(context: RouteContext) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 测试状态保持的交互按钮
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("状态保持测试(计数值应保持不变): $testCounter", color = MaterialTheme.colorScheme.error)
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = { testCounter++ }) {
-                    Text("+1")
-                }
-            }
-
             Spacer(modifier = Modifier.height(32.dp))
-            Button(onClick = { navigator.navigateTo("/fav") }) {
-                Text("前往收藏页面")
+            Button(onClick = { navigator.popBackStack() }) {
+                Text("返回上一页")
             }
         }
     }

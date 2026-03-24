@@ -18,7 +18,7 @@ interface UserService {
 @Service
 class UserServiceImpl : UserService {
     override fun getUserName(): String {
-        return "TianQu Admin"
+        return "天衢"
     }
 
     override fun isUserLoggedIn(): Boolean {
