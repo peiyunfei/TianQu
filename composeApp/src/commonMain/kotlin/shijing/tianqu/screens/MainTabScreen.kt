@@ -9,8 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import shijing.tianqu.router.RouteContext
-import shijing.tianqu.router.RouteTransition
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 import shijing.tianqu.router.generated.RouteRegistry
 
@@ -19,11 +18,10 @@ import shijing.tianqu.router.generated.RouteRegistry
  */
 @Router(
     path = "/main_tab",
-    enterTransition = RouteTransition.Fade,
-    exitTransition = RouteTransition.Fade
+    transition = "Slide",
 )
 @Composable
-fun MainTabScreen(context: RouteContext) {
+fun MainTabScreen(context: RouterContext) {
 
     // 将 Tab 选中状态改为 rememberSaveable，防止后台被销毁时重置回首页
     var selectedTab by rememberSaveable { mutableStateOf(0) }
@@ -57,13 +55,13 @@ fun MainTabScreen(context: RouteContext) {
                 saveableStateHolder.SaveableStateProvider("tab_home") {
                     // 动态获取对应的节点并执行渲染
                     val homeNode = RouteRegistry.routers.find { it.path == "/home" }
-                    homeNode?.composable?.invoke(RouteContext("/home"))
+                    homeNode?.composable?.invoke(RouterContext("/home"))
                 }
             } else {
                 saveableStateHolder.SaveableStateProvider("tab_profile") {
                     val profileNode = RouteRegistry.routers.find { it.path == "/user/{id}" }
                     // 注意：这只是为了演示。在完整的路由框架里，Tab 的切换通常不直接用 /user/{id}，而是专门的 TabRoot 页面
-                    profileNode?.composable?.invoke(RouteContext("/user/1001", mapOf("id" to "1001")))
+                    profileNode?.composable?.invoke(RouterContext("/user/1001", mapOf("id" to "1001")))
                 }
             }
         }

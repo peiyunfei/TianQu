@@ -8,19 +8,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import shijing.tianqu.router.RouteContext
-import shijing.tianqu.router.RouteTransition
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Router(
     path = "/profile",
-    enterTransition = RouteTransition.Slide,
-    exitTransition = RouteTransition.Slide
+    transition = "Slide",
 )
 @Composable
-fun ProfileScreen(context: RouteContext) {
+fun ProfileScreen(context: RouterContext) {
     val navigator = LocalNavigator.current
     
     // 尝试提取从上一页通过 Navigator.navigateTo(..., extra) 传递过来的复杂对象参数

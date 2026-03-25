@@ -8,8 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import shijing.tianqu.router.RouteGuard
-import shijing.tianqu.router.RouteTransition
+import shijing.tianqu.router.RouterGuard
 
 import kotlinx.coroutines.CoroutineScope
 import shijing.tianqu.runtime.handler.RouterHandler
@@ -47,9 +46,9 @@ val LocalNavigator = compositionLocalOf<Navigator> {
  */
 @Composable
 fun rememberNavigator(
-    routes: List<RouteNode>,
+    routes: List<RouterNode>,
     startRoute: String,
-    guards: List<RouteGuard> = emptyList(),
+    guards: List<RouterGuard> = emptyList(),
     routerHandler: RouterHandler? = null,
     parent: Navigator? = null
 ): Navigator {
@@ -81,7 +80,7 @@ fun rememberNavigator(
  * @param modifier 修饰符
  */
 @Composable
-fun RouterHost(
+fun RouteHost(
     navigator: Navigator,
     modifier: Modifier = Modifier
 ) {
@@ -99,7 +98,7 @@ fun RouterHost(
 
     // 监听返回栈的变化，清理已经被移出栈的页面保存的状态
     // 如果某个 entry 的 id 不在当前的 backStack 中了，说明它已被 pop 出去了，此时彻底清理它的状态缓存
-    LaunchedEffect(navigator.backStack) {
+    LaunchedEffect(navigator.backStack.size) {
         println("yunfei LaunchedEffect")
         val currentEntryIds = navigator.backStack.map { it.id }.toSet()
         
@@ -129,41 +128,15 @@ fun RouterHost(
                     targetState = currentEntry,
                     modifier = Modifier.fillMaxSize(),
                     transitionSpec = {
-                        val enter = targetState.node.enterTransition
-                        val exit = initialState.node.exitTransition
+                        val isPop = targetState.id != navigator.backStack.lastOrNull()?.id
+                        val strategy = targetState.node.transition
 
-                        // 根据配置生成对应的进入动画
-                        val enterAnim = when (enter) {
-                            RouteTransition.None -> enterTransitionNone()
-                            RouteTransition.Fade -> fadeIn(animationSpec = tween(300))
-                            RouteTransition.Slide -> if (isPop) {
-                                // Pop 时，A页面（旧页面，此时为 targetState）只需渐显，不进行位移，保持在原地被 B 离开后露出
-                                fadeIn(animationSpec = tween(300))
-                            } else {
-                                // Push 时，B页面（新页面，此时为 targetState）从右侧完整滑入，覆盖在 A页面 之上
-                                slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300))
-                            }
-                            RouteTransition.Scale -> scaleIn(initialScale = 0.8f, animationSpec = tween(300)) + fadeIn()
-                        }
-
-                        // 根据配置生成对应的退出动画
-                        val exitAnim = when (exit) {
-                            RouteTransition.None -> exitTransitionNone()
-                            RouteTransition.Fade -> fadeOut(animationSpec = tween(300))
-                            RouteTransition.Slide -> if (isPop) {
-                                // Pop 时，B页面（当前页，此时为 initialState）向右侧滑出，露出下面的 A页面
-                                slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300))
-                            } else {
-                                // Push 时，A页面（当前页，此时为 initialState）保持不动并渐隐，等待被 B页面 覆盖
-                                fadeOut(animationSpec = tween(300))
-                            }
-                            RouteTransition.Scale -> scaleOut(targetScale = 1.2f, animationSpec = tween(300)) + fadeOut()
-                        }
-
-                        // zIndex 控制层级：Push 时新页面在上，Pop 时退出页面在上（此时 targetZIndex 需要低于 initial）
-                        (enterAnim togetherWith exitAnim).apply {
-                            targetContentZIndex = if (isPop) -1f else 1f
-                        }
+                        strategy.buildTransitionSpec(
+                            scope = this,
+                            initial = initialState,
+                            target = targetState,
+                            isPop = isPop
+                        )
                     },
                     label = "route_transition"
                 ) { entry ->

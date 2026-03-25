@@ -8,8 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import shijing.tianqu.router.RouteContext
-import shijing.tianqu.router.RouteTransition
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
 import shijing.tianqu.runtime.rememberRouterScope
@@ -24,11 +23,10 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Router(
     path = "/settings",
-    enterTransition = RouteTransition.Slide,
-    exitTransition = RouteTransition.Slide
+    transition = "Slide",
 )
 @Composable
-fun SettingsScreen(context: RouteContext) {
+fun SettingsScreen(context: RouterContext) {
     // 从上下文中获取全局注入的 Navigator 实例
     val navigator = LocalNavigator.current
     

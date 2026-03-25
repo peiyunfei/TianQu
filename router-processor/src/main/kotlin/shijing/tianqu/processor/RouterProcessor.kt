@@ -5,6 +5,7 @@ import com.google.devtools.ksp.symbol.*
 import com.google.devtools.ksp.validate
 import shijing.tianqu.router.Router
 import shijing.tianqu.router.Service
+import shijing.tianqu.router.Transition
 
 /**
  * 路由符号处理器。
@@ -31,7 +32,7 @@ class RouterProcessor(
         deferredSymbols.addAll(functionDeclarations.filterNot { it.validate() })
 
         if (validFunctions.isNotEmpty()) {
-            RouteRegistryGeneratorStrategy().generate(validFunctions, codeGenerator, logger)
+            RouterRegistryGeneratorStrategy().generate(validFunctions, codeGenerator, logger)
         }
 
         // 2. 策略：处理服务注入
@@ -43,6 +44,16 @@ class RouterProcessor(
         if (validClasses.isNotEmpty()) {
             ServiceRegistryGeneratorStrategy().generate(validClasses, codeGenerator, logger)
         }
+
+        // 3. 策略：处理自定义动画过渡注入
+        val transitionSymbols = resolver.getSymbolsWithAnnotation(Transition::class.qualifiedName ?: "")
+        val transitionDeclarations = transitionSymbols.filterIsInstance<KSClassDeclaration>()
+        val validTransitions = transitionDeclarations.filter { it.validate() }.toList()
+        deferredSymbols.addAll(transitionDeclarations.filterNot { it.validate() })
+
+        // 注意：即使 validTransitions 为空，我们也应该生成一个空的 TransitionStrategyRegistry
+        // 这是为了保证 RouteRegistry 中引用 TransitionStrategyRegistry 不会报 Unresolved reference 错误。
+        TransitionRegistryGeneratorStrategy().generate(validTransitions, codeGenerator, logger)
 
         return deferredSymbols
     }

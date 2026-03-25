@@ -4,17 +4,16 @@ import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
-import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.writeTo
-import shijing.tianqu.router.RouteContext
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 
 /**
  * 负责生成 RouteRegistry 的具体策略
  */
-class RouteRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclaration> {
+class RouterRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclaration> {
     override fun generate(symbols: List<KSFunctionDeclaration>, codeGenerator: CodeGenerator, logger: KSPLogger) {
         val functions = symbols
         val packageName = "shijing.tianqu.router.generated"
@@ -24,8 +23,6 @@ class RouteRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclarat
         val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
         // 引入 RouteContext
         val routeContextClass = ClassName("shijing.tianqu.router", "RouteContext")
-        // 引入 RouteTransition
-        val transitionClass = ClassName("shijing.tianqu.router", "RouteTransition")
         
         // 定义生成代码中的 RouteNode 数据类类型
         val routeNodeType = ClassName("shijing.tianqu.runtime", "RouteNode")
@@ -49,16 +46,9 @@ class RouteRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclarat
             // 将 {id} 替换为正则表达式 ([\w-]+)，用于运行时匹配
             val regexPattern = pathValue.replace(Regex("\\{[^/]+\\}"), "([\\\\w-]+)")
             
-            // 获取枚举值 (默认值为 Slide)
-            // KSP 中枚举参数的值是一个 KSClassDeclaration，我们需要获取其简短名称
-            fun getEnumName(argName: String): String {
-                val arg = annotation.arguments.find { it.name?.asString() == argName }
-                val type = arg?.value as? KSType
-                return type?.declaration?.simpleName?.asString() ?: "Slide"
-            }
-            
-            val enterTransition = getEnumName("enterTransition")
-            val exitTransition = getEnumName("exitTransition")
+            // 获取动画策略名称 (默认值为 "Slide")
+            val transitionArg = annotation.arguments.find { it.name?.asString() == "transition" }
+            val transitionName = transitionArg?.value?.toString() ?: "Slide"
             
             // 获取函数名和所在的包
             val funcName = func.simpleName.asString()
@@ -68,11 +58,11 @@ class RouteRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclarat
             val comma = if (index < functions.size - 1) ",\n" else "\n"
             
             // 构造 RouteNode 实例
-            // RouteNode(path, regexPattern, enterTransition, exitTransition, { context -> func(context) })
+            // RouteNode(path, regexPattern, transition, { context -> func(context) })
             // 只有当目标函数接受 RouteContext 参数时才传递
 
             val hasContextParam = func.parameters.any {
-                it.type.resolve().declaration.qualifiedName?.asString() == RouteContext::class.qualifiedName
+                it.type.resolve().declaration.qualifiedName?.asString() == RouterContext::class.qualifiedName
             }
             
             val composableCall = if (hasContextParam) {
@@ -81,18 +71,19 @@ class RouteRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclarat
                 "{ _ -> %T() }"
             }
 
+            // 在生成路由表时，通过 TransitionStrategyRegistry 去获取动画策略的实例工厂
+            val transitionInstantiateStr = "shijing.tianqu.router.generated.TransitionStrategyRegistry.transitions[%S]?.invoke() ?: shijing.tianqu.runtime.transition.SlideTransitionStrategy()"
+
             initBlock.add(
                 "RouteNode(\n" +
                 "    path = %S,\n" +
                 "    regexPattern = %S,\n" +
-                "    enterTransition = %T.%L,\n" +
-                "    exitTransition = %T.%L,\n" +
+                "    transition = $transitionInstantiateStr,\n" +
                 "    composable = $composableCall\n" +
                 ")%L",
                 pathValue,
                 "^$regexPattern\$", // 添加首尾匹配
-                transitionClass, enterTransition,
-                transitionClass, exitTransition,
+                transitionName,
                 funcClassName,
                 comma
             )

@@ -13,8 +13,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import shijing.tianqu.router.RouteContext
-import shijing.tianqu.router.RouteTransition
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
 import shijing.tianqu.runtime.utils.rememberService
@@ -27,11 +26,10 @@ data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
 @OptIn(ExperimentalMaterial3Api::class)
 @Router(
     path = "/home",
-    enterTransition = RouteTransition.Slide,
-    exitTransition = RouteTransition.Slide
+    transition = "None"
 )
 @Composable
-fun HomeScreen(context: RouteContext) {
+fun HomeScreen(context: RouterContext) {
     val navigator = LocalNavigator.current
     
     // 增加一个测试状态，用于验证切换回来时状态是否丢失
@@ -148,6 +146,11 @@ fun HomeScreen(context: RouteContext) {
             // 演示参数化路由
             Button(onClick = { navigator.navigateTo("/user/1001") }) {
                 Text("前往用户 1001 详情")
+            }
+
+            // 演示自定义动画
+            Button(onClick = { navigator.navigateTo("/demo_anim") }) {
+                Text("测试自定义动画 (RotateScale)")
             }
             Spacer(modifier = Modifier.height(12.dp))
             

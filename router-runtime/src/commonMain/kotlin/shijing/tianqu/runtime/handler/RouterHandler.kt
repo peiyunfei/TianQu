@@ -1,6 +1,6 @@
 package shijing.tianqu.runtime.handler
 
-import shijing.tianqu.router.RouteContext
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.runtime.Navigator
 
 /**
@@ -16,7 +16,7 @@ interface RouterHandler {
      * @param navigator 导航器核心类，负责管理应用内的页面栈
      * @return true 外部路由已经处理了，默认不处理
      */
-    fun handleExternalRoute(context: RouteContext, navigator: Navigator): Boolean = false
+    fun handleExternalRoute(context: RouterContext, navigator: Navigator): Boolean = false
 
     /**
      *  页面不存在

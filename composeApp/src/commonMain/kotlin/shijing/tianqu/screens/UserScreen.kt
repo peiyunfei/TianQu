@@ -12,8 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import shijing.tianqu.router.RouteContext
-import shijing.tianqu.router.RouteTransition
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
 
@@ -25,11 +24,10 @@ import shijing.tianqu.runtime.LocalNavigator
 @OptIn(ExperimentalMaterial3Api::class)
 @Router(
     path = "/user/{id}",
-    enterTransition = RouteTransition.Slide,
-    exitTransition = RouteTransition.Slide
+    transition = "Slide",
 )
 @Composable
-fun UserScreen(context: RouteContext) {
+fun UserScreen(context: RouterContext) {
 
     // 增加一个测试状态，用于验证切换回来时状态是否丢失
     var testCounter by rememberSaveable { mutableStateOf(0) }

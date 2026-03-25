@@ -4,8 +4,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
-import shijing.tianqu.router.RouteContext
-import shijing.tianqu.router.RouteGuard
+import shijing.tianqu.router.RouterContext
+import shijing.tianqu.router.RouterGuard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,8 +26,8 @@ import kotlin.coroutines.CoroutineContext
  * @param coroutineScope 用于执行异步路由守卫的协程作用域
  */
 class Navigator(
-    private val routeRegistry: List<RouteNode>,
-    private val guards: List<RouteGuard> = emptyList(),
+    private val routeRegistry: List<RouterNode>,
+    private val guards: List<RouterGuard> = emptyList(),
     private val routerHandler: RouterHandler? = null,
     val parent: Navigator? = null,
     val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
@@ -54,29 +54,29 @@ class Navigator(
         private set
         
     // 基于协程挂起和恢复特性的自定义简易 SharedFlow 事件总线
-    private val _routeEvents = MutableSimpleSharedFlow<RouteEvent>()
+    private val _routeEvents = MutableSimpleSharedFlow<RouterEvent>()
 
     /**
      * 路由事件流，外部通过 collect 订阅事件。
      * 使用自定义的 SimpleSharedFlow 替代 kotlinx SharedFlow，
      * 核心原理是 awaitCancellation 挂起 + CancellationException 自动移除订阅。
      */
-    val routeEvents: SimpleSharedFlow<RouteEvent> = _routeEvents
+    val routeEvents: SimpleSharedFlow<RouterEvent> = _routeEvents
     
-    private suspend fun emitEvent(event: RouteEvent) {
+    private suspend fun emitEvent(event: RouterEvent) {
         _routeEvents.emit(event)
     }
 
     /**
      * 准备路由上下文并匹配路由节点
      */
-    private fun prepareContext(url: String, extra: Any? = null): Pair<RouteNode?, RouteContext> {
+    private fun prepareContext(url: String, extra: Any? = null): Pair<RouterNode?, RouterContext> {
         val (pathPart, queryPart) = UrlParser.parseUrl(url)
         val matchedNode = findMatchedNode(pathPart)
         val pathParams = matchedNode?.let { UrlParser.extractPathParams(it.path, it.regexPattern, pathPart) } ?: emptyMap()
         val queryParams = UrlParser.parseQuery(queryPart)
         
-        val context = RouteContext(
+        val context = RouterContext(
             url = url,
             pathParams = pathParams,
             queryParams = queryParams,
@@ -88,7 +88,7 @@ class Navigator(
     /**
      * 查找匹配的路由节点
      */
-    private fun findMatchedNode(path: String): RouteNode? {
+    private fun findMatchedNode(path: String): RouterNode? {
         return routeRegistry.find { node ->
             Regex(node.regexPattern).matches(path)
         }
@@ -111,7 +111,7 @@ class Navigator(
             // 如果未匹配到 Compose 路由节点，尝试交给外部路由处理
             if (routerHandler?.handleExternalRoute(context, this) == true || parent?.routerHandler?.handleExternalRoute(context, this) == true) {
                 // 外部路由处理了该事件，发送导航成功事件 (External)
-                coroutineScope.launch { emitEvent(RouteEvent.Navigated(action, url)) }
+                coroutineScope.launch { emitEvent(RouterEvent.Navigated(action, url)) }
                 return true
             }
             val handler = routerHandler?.handleNotFound(url, this) ?: parent?.routerHandler?.handleNotFound(url, this) ?: false
@@ -120,7 +120,7 @@ class Navigator(
                 return true
             }
             // 直接发送页面不存在事件出去
-            coroutineScope.launch { emitEvent(RouteEvent.NotFound(url)) }
+            coroutineScope.launch { emitEvent(RouterEvent.NotFound(url)) }
             return false
         }
 
@@ -143,7 +143,7 @@ class Navigator(
             if (!restored.isNullOrEmpty()) {
                 backStack.clear()
                 backStack.addAll(restored)
-                coroutineScope.launch { emitEvent(RouteEvent.Navigated(action, url)) }
+                coroutineScope.launch { emitEvent(RouterEvent.Navigated(action, url)) }
                 return true
             }
         }
@@ -169,7 +169,7 @@ class Navigator(
         
         // 发送导航成功事件
         coroutineScope.launch {
-            emitEvent(RouteEvent.Navigated(action, url))
+            emitEvent(RouterEvent.Navigated(action, url))
         }
         
         return true

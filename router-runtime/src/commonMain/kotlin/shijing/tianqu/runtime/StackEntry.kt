@@ -1,6 +1,6 @@
 package shijing.tianqu.runtime
 
-import shijing.tianqu.router.RouteContext
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.runtime.async.DeferredAsyncResult
 
 import kotlinx.coroutines.CoroutineScope
@@ -10,8 +10,8 @@ import kotlinx.coroutines.cancel
  * 路由栈实体
  */
 data class StackEntry(
-    val node: RouteNode,
-    val context: RouteContext,
+    val node: RouterNode,
+    val context: RouterContext,
     val result: DeferredAsyncResult<Any?>? = null,
     val id: String = generateEntryId()
 ) {

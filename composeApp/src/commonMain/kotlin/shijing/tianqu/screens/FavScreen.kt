@@ -8,8 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import shijing.tianqu.router.RouteContext
-import shijing.tianqu.router.RouteTransition
+import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
 
@@ -21,11 +20,10 @@ import shijing.tianqu.runtime.LocalNavigator
 @OptIn(ExperimentalMaterial3Api::class)
 @Router(
     path = "/fav",
-    enterTransition = RouteTransition.Slide,
-    exitTransition = RouteTransition.Slide
+    transition = "Slide",
 )
 @Composable
-fun FavScreen(context: RouteContext) {
+fun FavScreen(context: RouterContext) {
     val navigator = LocalNavigator.current
     
     // 从上下文中提取由正则匹配出来的路径参数

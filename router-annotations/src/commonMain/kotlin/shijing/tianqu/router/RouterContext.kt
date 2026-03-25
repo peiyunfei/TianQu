@@ -9,7 +9,7 @@ package shijing.tianqu.router
  * @param queryParams URL 中的查询参数，如 ?ref=home 提取的 ref=["home"]
  * @param extra 额外传递的复杂对象参数（不适合或者不方便放在URL中的数据，比如 Bitmap、自定义数据类实例等）
  */
-data class RouteContext(
+data class RouterContext(
     val url: String,
     val pathParams: Map<String, String> = emptyMap(),
     val queryParams: Map<String, List<String>> = emptyMap(),
