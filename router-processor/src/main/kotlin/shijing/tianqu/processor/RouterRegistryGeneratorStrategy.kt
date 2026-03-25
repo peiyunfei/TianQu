@@ -22,11 +22,11 @@ class RouterRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclara
         // 引入 Compose 的注解
         val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
         // 引入 RouteContext
-        val routeContextClass = ClassName("shijing.tianqu.router", "RouteContext")
+        val routeContextClass = ClassName("shijing.tianqu.router", "RouterContext")
         
         // 定义生成代码中的 RouteNode 数据类类型
-        val routeNodeType = ClassName("shijing.tianqu.runtime", "RouteNode")
-        
+        val routeNodeType = ClassName("shijing.tianqu.runtime", "RouterNode")
+
         // 构建 List 的类型：List<RouteNode>
         val listType = ClassName("kotlin.collections", "List").parameterizedBy(routeNodeType)
 
@@ -75,7 +75,7 @@ class RouterRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclara
             val transitionInstantiateStr = "shijing.tianqu.router.generated.TransitionStrategyRegistry.transitions[%S]?.invoke() ?: shijing.tianqu.runtime.transition.SlideTransitionStrategy()"
 
             initBlock.add(
-                "RouteNode(\n" +
+                "RouterNode(\n" +
                 "    path = %S,\n" +
                 "    regexPattern = %S,\n" +
                 "    transition = $transitionInstantiateStr,\n" +
