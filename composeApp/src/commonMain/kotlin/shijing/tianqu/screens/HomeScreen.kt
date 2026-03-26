@@ -19,6 +19,7 @@ import shijing.tianqu.runtime.LocalNavigator
 import shijing.tianqu.runtime.utils.rememberService
 import shijing.tianqu.services.UserService
 import shijing.tianqu.featureb.FeatureBManager
+import shijing.tianqu.runtime.navigateArgs
 
 // 定义一个用于演示对象传递的数据类
 data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
@@ -166,6 +167,25 @@ fun HomeScreen(context: RouterContext) {
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
                 Text("测试弹窗路由 (Dialog)")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 测试类型安全传参
+            Button(
+                onClick = {
+                    navigator.navigateArgs(
+                        path = "/typesafe_demo",
+                        args = UserDetailArgs(
+                            userId = 999L,
+                            username = "TianQu Router",
+                            isVip = true,
+                            scores = listOf(100, 98, 95)
+                        )
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Text("测试类型安全传参 (Data Class)")
             }
             Spacer(modifier = Modifier.height(12.dp))
 
