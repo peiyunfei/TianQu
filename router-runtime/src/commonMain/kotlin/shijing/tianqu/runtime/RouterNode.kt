@@ -2,6 +2,7 @@ package shijing.tianqu.runtime
 
 import androidx.compose.runtime.Composable
 import shijing.tianqu.router.RouterContext
+import shijing.tianqu.router.RouteType
 import shijing.tianqu.runtime.transition.TransitionStrategy
 
 /**
@@ -11,5 +12,6 @@ data class RouterNode(
     val path: String,
     val regexPattern: String,
     val transition: TransitionStrategy,
+    val type: RouteType = RouteType.SCREEN,
     val composable: @Composable (RouterContext) -> Unit
 )

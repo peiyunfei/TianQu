@@ -50,6 +50,17 @@ class RouterRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclara
             val transitionArg = annotation.arguments.find { it.name?.asString() == "transition" }
             val transitionName = transitionArg?.value?.toString() ?: "Slide"
             
+            // 获取路由类型 (默认值为 SCREEN)
+            val typeArg = annotation.arguments.find { it.name?.asString() == "type" }
+            val typeValue = typeArg?.value
+            val typeName = if (typeValue is com.google.devtools.ksp.symbol.KSType) {
+                typeValue.declaration.simpleName.asString()
+            } else {
+                typeValue?.toString() ?: "SCREEN"
+            }
+            // 处理形如 "RouteType.SCREEN" 的情况
+            val cleanTypeName = typeName.substringAfterLast(".")
+
             // 获取函数名和所在的包
             val funcName = func.simpleName.asString()
             val funcPackage = func.packageName.asString()
@@ -79,11 +90,13 @@ class RouterRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclara
                 "    path = %S,\n" +
                 "    regexPattern = %S,\n" +
                 "    transition = $transitionInstantiateStr,\n" +
+                "    type = shijing.tianqu.router.RouteType.%L,\n" +
                 "    composable = $composableCall\n" +
                 ")%L",
                 pathValue,
                 "^$regexPattern\$", // 添加首尾匹配
                 transitionName,
+                cleanTypeName,
                 funcClassName,
                 comma
             )

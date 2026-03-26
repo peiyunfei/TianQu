@@ -1,13 +1,15 @@
 package shijing.tianqu.runtime
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import shijing.tianqu.router.RouteType
 import shijing.tianqu.router.RouterGuard
 
 import kotlinx.coroutines.CoroutineScope
@@ -119,16 +121,17 @@ fun RouteHost(
         println("yunfei CompositionLocalProvider")
         println("yunfei -------------------------------------------------------")
         Box(modifier = modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
-            // 获取当前栈顶路由实体
-            val currentEntry = navigator.backStack.lastOrNull()
+            // 获取当前栈顶路由实体 (仅限于 SCREEN 类型的页面)
+            val currentScreenEntry = navigator.backStack.lastOrNull { it.node.type == RouteType.SCREEN }
 
-            if (currentEntry != null) {
+            if (currentScreenEntry != null) {
                 // 使用 AnimatedContent 实现路由切换动画
                 AnimatedContent(
-                    targetState = currentEntry,
+                    targetState = currentScreenEntry,
                     modifier = Modifier.fillMaxSize(),
                     transitionSpec = {
-                        val isPop = targetState.id != navigator.backStack.lastOrNull()?.id
+                        val screenEntries = navigator.backStack.filter { it.node.type == RouteType.SCREEN }
+                        val isPop = targetState.id != screenEntries.lastOrNull()?.id
                         val strategy = targetState.node.transition
 
                         strategy.buildTransitionSpec(
@@ -163,10 +166,28 @@ fun RouteHost(
                     }
                 }
             }
+
+            // 渲染 弹窗 类型的页面
+            val dialogEntries = navigator.backStack.filter { it.node.type == RouteType.DIALOG }
+            dialogEntries.forEach { dialogEntry ->
+                Dialog(
+                    onDismissRequest = {
+                        navigator.popBackStack()
+                    },
+                    properties = DialogProperties(usePlatformDefaultWidth = false)
+                ) {
+                    saveableStateHolder.SaveableStateProvider(dialogEntry.id) {
+                        val entryScope = rememberCoroutineScope()
+                        DisposableEffect(dialogEntry) {
+                            dialogEntry.scope = entryScope
+                            onDispose {
+                                // 清理
+                            }
+                        }
+                        dialogEntry.node.composable(dialogEntry.context)
+                    }
+                }
+            }
         }
     }
 }
-
-// 无动画占位符
-private fun enterTransitionNone(): EnterTransition = fadeIn(animationSpec = tween(0))
-private fun exitTransitionNone(): ExitTransition = fadeOut(animationSpec = tween(0))

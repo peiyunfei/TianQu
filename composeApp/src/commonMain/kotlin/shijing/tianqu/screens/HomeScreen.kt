@@ -159,6 +159,15 @@ fun HomeScreen(context: RouterContext) {
                 Text("打开深层链接 (带查询参数)")
             }
             Spacer(modifier = Modifier.height(12.dp))
+            
+            // 演示弹窗路由
+            Button(
+                onClick = { navigator.navigateTo("/demo_dialog") },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text("测试弹窗路由 (Dialog)")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
 
             // 演示模块间反向通信：composeApp(上层)依赖feature-b(底层)
             // 点击此按钮，调用 feature-b 中的逻辑，feature-b 再通过接口回调 composeApp 的实现

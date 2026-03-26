@@ -9,9 +9,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 import shijing.tianqu.router.Transition
+import shijing.tianqu.runtime.LocalNavigator
 import shijing.tianqu.runtime.StackEntry
 import shijing.tianqu.runtime.transition.BaseTransitionStrategy
 
@@ -52,12 +54,18 @@ class RotateScaleTransitionStrategy : BaseTransitionStrategy() {
 @Router(path = "/demo_anim", transition = "RotateScale")
 @Composable
 fun DemoAnimScreen(context: RouterContext) {
+
+    val navigator = LocalNavigator.current
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Magenta),
+            .background(Color.Magenta)
+            .clickable {
+                navigator.popBackStack()
+            },
         contentAlignment = Alignment.Center
     ) {
-        Text("自定义动画展示页面")
+        Text("自定义动画展示页面，点击返回上一页")
     }
 }
