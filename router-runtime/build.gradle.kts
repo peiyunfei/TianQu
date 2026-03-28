@@ -32,6 +32,7 @@ kotlin {
             implementation(compose.ui)
             implementation(project(":router-annotations"))
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.androidx.lifecycle.viewmodelCompose)
         }
     }
 }

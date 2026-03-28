@@ -3,6 +3,8 @@ package shijing.tianqu.runtime
 import shijing.tianqu.router.RouterContext
 import shijing.tianqu.runtime.async.DeferredAsyncResult
 
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 
@@ -14,7 +16,18 @@ data class StackEntry(
     val context: RouterContext,
     val result: DeferredAsyncResult<Any?>? = null,
     val id: String = generateEntryId()
-) {
+) : ViewModelStoreOwner {
+    
+    private var _viewModelStore: ViewModelStore? = null
+
+    override val viewModelStore: ViewModelStore
+        get() {
+            if (_viewModelStore == null) {
+                _viewModelStore = ViewModelStore()
+            }
+            return _viewModelStore!!
+        }
+
     // 为每个页面绑定独立的协程作用域，出栈时取消
     var scope: CoroutineScope? = null
         internal set
@@ -28,6 +41,7 @@ data class StackEntry(
 
     internal fun dispose() {
         scope?.cancel()
+        _viewModelStore?.clear()
         disposeCallbacks.forEach { it() }
         disposeCallbacks.clear()
     }

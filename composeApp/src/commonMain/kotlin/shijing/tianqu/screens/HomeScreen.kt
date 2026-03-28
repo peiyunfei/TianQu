@@ -208,6 +208,15 @@ fun HomeScreen(context: RouterContext) {
             }
             Spacer(modifier = Modifier.height(12.dp))
 
+            // 测试专属作用域 ViewModel
+            Button(
+                onClick = { navigator.navigateTo("/demo_viewmodel") },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+            ) {
+                Text("测试 ViewModel 生命周期绑定")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
             // 演示模块间反向通信：composeApp(上层)依赖feature-b(底层)
             // 点击此按钮，调用 feature-b 中的逻辑，feature-b 再通过接口回调 composeApp 的实现
             Button(onClick = {

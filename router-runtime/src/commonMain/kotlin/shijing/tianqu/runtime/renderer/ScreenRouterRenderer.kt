@@ -10,6 +10,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import shijing.tianqu.router.RouteType
 import shijing.tianqu.runtime.LocalAnimatedVisibilityScope
 import shijing.tianqu.runtime.LocalSharedTransitionScope
@@ -71,7 +72,13 @@ class ScreenRouterRenderer : RouterRenderer {
                                 }
 
                                 // 渲染实际页面
-                                entry.node.composable(entry.context)
+                                // 将当前页面的 StackEntry (它实现了 ViewModelStoreOwner) 注入给 Compose 上下文
+                                // 这样在该页面内调用 viewModel() 时，拿到的就会是与该页面生命周期绑定的 ViewModel
+                                CompositionLocalProvider(
+                                    LocalViewModelStoreOwner provides entry
+                                ) {
+                                    entry.node.composable(entry.context)
+                                }
                             }
                         }
                     }

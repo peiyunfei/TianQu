@@ -1,11 +1,13 @@
 package shijing.tianqu.runtime.renderer
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import shijing.tianqu.router.RouteType
 import shijing.tianqu.runtime.Navigator
 
@@ -40,7 +42,12 @@ class DialogRouterRenderer : RouterRenderer {
                         }
                     }
                     // 渲染弹窗内容
-                    dialogEntry.node.composable(dialogEntry.context)
+                    // 将当前页面的 StackEntry (它实现了 ViewModelStoreOwner) 注入给 Compose 上下文
+                    CompositionLocalProvider(
+                        LocalViewModelStoreOwner provides dialogEntry
+                    ) {
+                        dialogEntry.node.composable(dialogEntry.context)
+                    }
                 }
             }
         }
