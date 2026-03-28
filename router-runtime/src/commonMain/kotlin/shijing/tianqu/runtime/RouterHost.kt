@@ -130,15 +130,16 @@ fun RouteHost(
                     targetState = currentScreenEntry,
                     modifier = Modifier.fillMaxSize(),
                     transitionSpec = {
-                        val screenEntries = navigator.backStack.filter { it.node.type == RouteType.SCREEN }
-                        val isPop = targetState.id != screenEntries.lastOrNull()?.id
+                        val isPopAnim = navigator.lastAction == NavigationAction.POP ||
+                                        navigator.lastAction == NavigationAction.POP_TO_ROOT ||
+                                        navigator.lastAction == NavigationAction.POP_UNTIL
                         val strategy = targetState.node.transition
 
                         strategy.buildTransitionSpec(
                             scope = this,
                             initial = initialState,
                             target = targetState,
-                            isPop = isPop
+                            isPop = isPopAnim
                         )
                     },
                     label = "route_transition"
