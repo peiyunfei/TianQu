@@ -28,6 +28,7 @@ class DeferredAsyncResult<T> : AsyncResult<T> {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onResult(callback: (T) -> Unit) {
         this.callback = callback
         if (deferred.isCompleted) {

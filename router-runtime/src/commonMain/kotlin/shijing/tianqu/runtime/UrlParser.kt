@@ -65,7 +65,8 @@ object UrlParser {
     }
 
     /**
-     * 简单的纯 Kotlin URL 解码实现，支持跨平台 (Android/iOS)
+     * 简单的纯 Kotlin URL 解码实现，支持跨平台 (Android/iOS)。
+     * 正确处理 UTF-8 编码的多字节字符（如中文）。
      */
     fun decode(encoded: String): String {
         if (!encoded.contains("%") && !encoded.contains("+")) return encoded
@@ -81,14 +82,24 @@ object UrlParser {
                     i++
                 }
                 ch == '%' && i + 2 < len -> {
-                    try {
-                        val hex = encoded.substring(i + 1, i + 3)
-                        val num = hex.toInt(16)
-                        builder.append(num.toChar())
-                        i += 3
-                    } catch (e: Exception) {
-                        builder.append(ch)
-                        i++
+                    // 收集连续的 URL 编码字节以正确解码 UTF-8 多字节字符
+                    val bytes = mutableListOf<Byte>()
+                    while (i < len && encoded[i] == '%' && i + 2 < len) {
+                        try {
+                            val hex = encoded.substring(i + 1, i + 3)
+                            bytes.add(hex.toInt(16).toByte())
+                            i += 3
+                        } catch (e: Exception) {
+                            // 如果解析失败，把 '%' 放回去并中断字节收集
+                            if (bytes.isEmpty()) {
+                                builder.append(encoded[i])
+                                i++
+                            }
+                            break
+                        }
+                    }
+                    if (bytes.isNotEmpty()) {
+                        builder.append(bytes.toByteArray().decodeToString())
                     }
                 }
                 else -> {
