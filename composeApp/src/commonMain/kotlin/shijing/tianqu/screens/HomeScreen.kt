@@ -21,13 +21,19 @@ import shijing.tianqu.services.UserService
 import shijing.tianqu.featureb.FeatureBManager
 import shijing.tianqu.runtime.navigateArgs
 
+import shijing.tianqu.runtime.transition.routerSharedBounds
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+
 // 定义一个用于演示对象传递的数据类
 data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Router(
-    path = "/home",
-    transition = "None"
+    path = "/home"
 )
 @Composable
 fun HomeScreen(context: RouterContext) {
@@ -186,6 +192,19 @@ fun HomeScreen(context: RouterContext) {
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
             ) {
                 Text("测试类型安全传参 (Data Class)")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 测试共享元素过渡动画
+            Box(
+                modifier = Modifier
+                    .routerSharedBounds(key = "shared_box_1")
+                    .size(100.dp)
+                    .background(Color.Red)
+                    .clickable { navigator.navigateTo("/shared_element_demo") },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("小红块", color = Color.White)
             }
             Spacer(modifier = Modifier.height(12.dp))
 

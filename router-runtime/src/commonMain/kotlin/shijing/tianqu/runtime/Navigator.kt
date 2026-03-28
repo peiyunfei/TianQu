@@ -63,6 +63,18 @@ class Navigator(
      */
     val routeEvents: SimpleSharedFlow<RouterEvent> = _routeEvents
     
+    /**
+     * 判断指定的页面实例是否仍然存活在导航器中（包括当前的返回栈以及保存在后台的多 Tab 栈）。
+     * 用于在 Compose 节点销毁时判断是否彻底清理 SaveableState。
+     */
+    fun isEntryAlive(entry: StackEntry): Boolean {
+        if (backStack.contains(entry)) return true
+        for (stack in savedStateStacks.values) {
+            if (stack.contains(entry)) return true
+        }
+        return false
+    }
+
     private suspend fun emitEvent(event: RouterEvent) {
         _routeEvents.emit(event)
     }

@@ -7,13 +7,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import shijing.tianqu.router.RouteType
 import shijing.tianqu.router.RouterGuard
 
 import kotlinx.coroutines.CoroutineScope
 import shijing.tianqu.runtime.handler.RouterHandler
+import shijing.tianqu.runtime.renderer.DialogRouterRenderer
+import shijing.tianqu.runtime.renderer.ScreenRouterRenderer
+
+/**
+ * 共享元素过渡作用域的 CompositionLocal
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
+
+/**
+ * 动画可见性作用域的 CompositionLocal
+ */
+val LocalAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
 
 /**
  * 获取包含当前 Navigator 的协程作用域。
@@ -94,100 +104,23 @@ fun RouteHost(
     // 将 state holder 提升作用域或使用单一实例，确保 tab 切换等场景不被重置
     // 由于 RouterHost 通常在全局只挂载一次，这里的 rememberSaveableStateHolder 是安全的
     val saveableStateHolder = rememberSaveableStateHolder()
-    
-    // 维护一个记录所有出现过的 entry.id 的集合，用于比较哪些需要被清理
-    val savedEntryIds = remember { mutableSetOf<String>() }
 
-    // 监听返回栈的变化，清理已经被移出栈的页面保存的状态
-    // 如果某个 entry 的 id 不在当前的 backStack 中了，说明它已被 pop 出去了，此时彻底清理它的状态缓存
-    LaunchedEffect(navigator.backStack.size) {
-        println("yunfei LaunchedEffect")
-        val currentEntryIds = navigator.backStack.map { it.id }.toSet()
-        
-        // 找出所有在 savedEntryIds 中存在，但不再存在于 currentEntryIds 中的 key（被 pop 掉的页面）
-        val poppedIds = savedEntryIds - currentEntryIds
-        
-        // 移除它们保存的状态，这样下次再 push 同一个路径时，就是全新的状态而不是恢复之前的脏状态
-        poppedIds.forEach { id ->
-            saveableStateHolder.removeState(id)
-            savedEntryIds.remove(id)
-        }
-        
-        // 将当前栈里的新 id 添加到记录中
-        savedEntryIds.addAll(currentEntryIds)
+    // 动态注册不同类型的路由渲染策略（如果未来有 BottomSheet 等，直接在这里添加即可）
+    val routeRenderers = remember {
+        listOf(
+            ScreenRouterRenderer(),
+            DialogRouterRenderer()
+        )
     }
 
     CompositionLocalProvider(LocalNavigator provides navigator) {
         println("yunfei CompositionLocalProvider")
         println("yunfei -------------------------------------------------------")
         Box(modifier = modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
-            // 获取当前栈顶路由实体 (仅限于 SCREEN 类型的页面)
-            val currentScreenEntry = navigator.backStack.lastOrNull { it.node.type == RouteType.SCREEN }
-
-            if (currentScreenEntry != null) {
-                // 使用 AnimatedContent 实现路由切换动画
-                AnimatedContent(
-                    targetState = currentScreenEntry,
-                    modifier = Modifier.fillMaxSize(),
-                    transitionSpec = {
-                        val isPopAnim = navigator.lastAction == NavigationAction.POP ||
-                                        navigator.lastAction == NavigationAction.POP_TO_ROOT ||
-                                        navigator.lastAction == NavigationAction.POP_UNTIL
-                        val strategy = targetState.node.transition
-
-                        strategy.buildTransitionSpec(
-                            scope = this,
-                            initial = initialState,
-                            target = targetState,
-                            isPop = isPopAnim
-                        )
-                    },
-                    label = "route_transition"
-                ) { entry ->
-                    // 仅当 entry 没有被标记为已销毁时渲染其状态
-                    if (navigator.backStack.contains(entry)) {
-                        // 为当前页面提供基于 SaveableStateHolder 的状态保留
-                        saveableStateHolder.SaveableStateProvider(entry.id) {
-                            // 提供独立协程作用域并挂载到 entry
-                            val entryScope = rememberCoroutineScope()
-                            DisposableEffect(entry) {
-                                entry.scope = entryScope
-                                onDispose {
-                                    // 节点移除清理
-                                }
-                            }
-
-                            // 渲染实际页面
-                            entry.node.composable(entry.context)
-                        }
-                    } else {
-                        // 如果 entry 已经不再栈内（比如 pop 动画仍在执行），我们不使用 StateProvider，
-                        // 以免在清理后再次注册状态导致异常或内存泄漏
-                        entry.node.composable(entry.context)
-                    }
-                }
-            }
-
-            // 渲染 弹窗 类型的页面
-            val dialogEntries = navigator.backStack.filter { it.node.type == RouteType.DIALOG }
-            dialogEntries.forEach { dialogEntry ->
-                Dialog(
-                    onDismissRequest = {
-                        navigator.popBackStack()
-                    },
-                    properties = DialogProperties(usePlatformDefaultWidth = false)
-                ) {
-                    saveableStateHolder.SaveableStateProvider(dialogEntry.id) {
-                        val entryScope = rememberCoroutineScope()
-                        DisposableEffect(dialogEntry) {
-                            dialogEntry.scope = entryScope
-                            onDispose {
-                                // 清理
-                            }
-                        }
-                        dialogEntry.node.composable(dialogEntry.context)
-                    }
-                }
+            // 使用策略模式遍历并渲染各种类型的页面
+            // 这种方式将 RouterHost 与具体的渲染逻辑解耦，符合开闭原则（OCP）
+            routeRenderers.forEach { renderer ->
+                renderer.Render(navigator = navigator, saveableStateHolder = saveableStateHolder)
             }
         }
     }
