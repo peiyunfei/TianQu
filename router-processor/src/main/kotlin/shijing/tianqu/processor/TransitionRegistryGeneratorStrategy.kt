@@ -12,11 +12,11 @@ import shijing.tianqu.router.Transition
 /**
  * 负责扫描带有 @Transition 注解的类，生成过渡动画的注册表
  */
-class TransitionRegistryGeneratorStrategy : CodeGenerationStrategy<KSClassDeclaration> {
+class TransitionRegistryGeneratorStrategy(private val moduleName: String = "Default") : CodeGenerationStrategy<KSClassDeclaration> {
     override fun generate(symbols: List<KSClassDeclaration>, codeGenerator: CodeGenerator, logger: KSPLogger) {
         val classes = symbols
         val packageName = "shijing.tianqu.router.generated"
-        val className = "TransitionStrategyRegistry"
+        val className = "TransitionStrategyRegistry_$moduleName"
 
         // Any 类的类型
         val anyType = ClassName("kotlin", "Any")
@@ -73,6 +73,7 @@ class TransitionRegistryGeneratorStrategy : CodeGenerationStrategy<KSClassDeclar
 
         // 创建 TransitionStrategyRegistry Object
         val typeSpec = TypeSpec.objectBuilder(className)
+            .addAnnotation(ClassName("shijing.tianqu.router.aggregation", "ModuleTransitionRegistry"))
             .addProperty(propertySpec)
             .build()
 

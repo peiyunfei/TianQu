@@ -154,6 +154,15 @@ fun HomeScreen(context: RouterContext) {
             Button(onClick = { navigator.navigateTo("/user/1001") }) {
                 Text("前往用户 1001 详情")
             }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 测试跨模块路由导航
+            Button(
+                onClick = { navigator.navigateTo("/featureb/home") },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Text("跨模块导航 (Feature B)")
+            }
 
             // 演示自定义动画
             Button(onClick = { navigator.navigateTo("/demo_anim") }) {
@@ -183,7 +192,7 @@ fun HomeScreen(context: RouterContext) {
                         path = "/typesafe_demo",
                         args = UserDetailArgs(
                             userId = 999L,
-                            username = "TianQu Router",
+                            username = "天衢路由",
                             isVip = true,
                             scores = listOf(100, 98, 95)
                         )

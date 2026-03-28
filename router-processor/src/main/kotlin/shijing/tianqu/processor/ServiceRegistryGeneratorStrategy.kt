@@ -12,11 +12,11 @@ import com.squareup.kotlinpoet.ksp.writeTo
 /**
  * 负责生成 ServiceRegistry 的具体策略
  */
-class ServiceRegistryGeneratorStrategy : CodeGenerationStrategy<KSClassDeclaration> {
+class ServiceRegistryGeneratorStrategy(private val moduleName: String = "Default") : CodeGenerationStrategy<KSClassDeclaration> {
     override fun generate(symbols: List<KSClassDeclaration>, codeGenerator: CodeGenerator, logger: KSPLogger) {
         val classes = symbols
         val packageName = "shijing.tianqu.router.generated"
-        val className = "ServiceRegistry"
+        val className = "ServiceRegistry_$moduleName"
 
         // 构建 Map 的类型：Map<KClass<*>, () -> Any>
         val kClassType = ClassName("kotlin.reflect", "KClass").parameterizedBy(STAR)
@@ -63,6 +63,7 @@ class ServiceRegistryGeneratorStrategy : CodeGenerationStrategy<KSClassDeclarati
             .build()
 
         val typeSpec = TypeSpec.objectBuilder(className)
+            .addAnnotation(ClassName("shijing.tianqu.router.aggregation", "ModuleServiceRegistry"))
             .addProperty(propertySpec)
             .build()
 

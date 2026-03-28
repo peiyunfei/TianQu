@@ -13,11 +13,11 @@ import shijing.tianqu.router.Router
 /**
  * 负责生成 RouteRegistry 的具体策略
  */
-class RouterRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclaration> {
+class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default") : CodeGenerationStrategy<KSFunctionDeclaration> {
     override fun generate(symbols: List<KSFunctionDeclaration>, codeGenerator: CodeGenerator, logger: KSPLogger) {
         val functions = symbols
         val packageName = "shijing.tianqu.router.generated"
-        val className = "RouteRegistry"
+        val className = "RouteRegistry_$moduleName"
 
         // 引入 Compose 的注解
         val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
@@ -82,8 +82,8 @@ class RouterRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclara
                 "{ _ -> %T() }"
             }
 
-            // 在生成路由表时，通过 TransitionStrategyRegistry 去获取动画策略的实例工厂
-            val transitionInstantiateStr = "shijing.tianqu.router.generated.TransitionStrategyRegistry.transitions[%S]?.invoke() ?: shijing.tianqu.runtime.transition.SlideTransitionStrategy()"
+            // 在生成路由表时，通过 TransitionStrategyRegistry_$moduleName 去获取动画策略的实例工厂
+            val transitionInstantiateStr = "shijing.tianqu.router.generated.TransitionStrategyRegistry_$moduleName.transitions[%S]?.invoke() ?: shijing.tianqu.runtime.transition.SlideTransitionStrategy()"
 
             initBlock.add(
                 "RouterNode(\n" +
@@ -111,6 +111,7 @@ class RouterRegistryGeneratorStrategy : CodeGenerationStrategy<KSFunctionDeclara
 
         // 创建 RouteRegistry Object
         val typeSpec = TypeSpec.objectBuilder(className)
+            .addAnnotation(ClassName("shijing.tianqu.router.aggregation", "ModuleRouteRegistry"))
             .addProperty(propertySpec)
             .build()
 

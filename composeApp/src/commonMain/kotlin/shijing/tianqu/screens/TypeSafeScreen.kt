@@ -60,10 +60,10 @@ fun TypeSafeScreen(context: RouterContext) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("✅ 解析成功！", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("User ID: ${args.userId}")
-                        Text("Username: ${args.username}")
-                        Text("Is VIP: ${if (args.isVip) "👑 是" else "否"}")
-                        Text("Scores: ${args.scores.joinToString(", ")}")
+                        Text("用户号: ${args.userId}")
+                        Text("用户名: ${args.username}")
+                        Text("是否会员: ${if (args.isVip) "👑 是" else "否"}")
+                        Text("分数: ${args.scores.joinToString(", ")}")
                     }
                 }
             } else {

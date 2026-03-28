@@ -6,12 +6,11 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.RouterGuard
 import shijing.tianqu.router.GuardChain
-import shijing.tianqu.router.generated.RouteRegistry
+import shijing.tianqu.router.generated.GlobalRouteAggregator
 
 import shijing.tianqu.runtime.RouteHost
 import shijing.tianqu.runtime.rememberNavigator
 import shijing.tianqu.runtime.service.ServiceManager
-import shijing.tianqu.router.generated.ServiceRegistry
 
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
@@ -43,12 +42,12 @@ fun App() {
 
     // 初始化 ServiceManager (模块间通信)
     LaunchedEffect(Unit) {
-        ServiceManager.init(ServiceRegistry.services)
+        ServiceManager.init(GlobalRouteAggregator.services)
     }
 
     // 初始化导航器实例，传入 KSP 生成的全局路由表和拦截守卫，并指定首页路径为嵌套路由容器 /main_tab
     val navigator = rememberNavigator(
-        routes = RouteRegistry.routers,
+        routes = GlobalRouteAggregator.routers,
         startRoute = "/main_tab",
         guards = guards
     )
