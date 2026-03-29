@@ -41,9 +41,9 @@
 
 ```toml
 [versions]
-tianqu-router-annotations = "1.0.0" # 替换为最新版本号
-tianqu-router-processor = "1.0.0"
-tianqu-router-runtime = "1.0.0"
+tianqu-router-annotations = "1.0.1" # 替换为最新版本号
+tianqu-router-processor = "1.0.1"
+tianqu-router-runtime = "1.0.1"
 ksp = "2.1.10-1.0.31" # 请务必与您项目的 Kotlin 版本一致
 
 [libraries]
@@ -402,9 +402,9 @@ fun ProfileScreen(context: RouterContext) {
 在项目根目录或 `gradle/libs.versions.toml` 中配置：
 ```toml
 [versions]
-tianqu-router-annotations = "0.0.1" # 替换为最新版本号
-tianqu-router-processor = "0.0.1"
-tianqu-router-runtime = "0.0.1"
+tianqu-router-annotations = "1.0.1" # 替换为最新版本号
+tianqu-router-processor = "1.0.1"
+tianqu-router-runtime = "1.0.1"
 kotlinx-serialization = "1.6.3"
 ksp = "2.1.10-1.0.31" # 请务必与您项目的 Kotlin 版本一致
 
