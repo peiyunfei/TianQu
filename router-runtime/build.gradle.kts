@@ -4,10 +4,23 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    `maven-publish`
+}
+
+apply(from = "$rootDir/maven-publish-config.gradle.kts")
+
+group = findProperty("TIANQU_GROUP").toString()
+version = findProperty("TIANQU_RUNTIME_VERSION").toString()
+
+publishing {
+    publications.withType<MavenPublication>().configureEach {
+        artifactId = artifactId.replace(project.name, "tianqu-${project.name}")
+    }
 }
 
 kotlin {
     androidTarget {
+        publishLibraryVariants("release", "debug")
         compilations.all {
             kotlinOptions {
                 jvmTarget = "17"

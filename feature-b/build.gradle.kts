@@ -42,7 +42,7 @@ dependencies {
 }
 
 ksp {
-    arg("tianqu.moduleName", "FeatureB")
+    arg("tianqu.moduleName", project.name)
 }
 
 kotlin.sourceSets.commonMain {

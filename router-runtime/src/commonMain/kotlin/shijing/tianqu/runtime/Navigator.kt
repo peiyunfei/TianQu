@@ -248,6 +248,10 @@ class Navigator(
         }
     }
 
+    fun pop() {
+        popBackStack(null)
+    }
+
     /**
      * 出栈，返回上一级页面
      *

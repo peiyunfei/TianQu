@@ -8,7 +8,7 @@ import shijing.tianqu.router.RouterGuard
 import shijing.tianqu.router.GuardChain
 import shijing.tianqu.router.generated.GlobalRouteAggregator
 
-import shijing.tianqu.runtime.RouteHost
+import shijing.tianqu.runtime.RouterHost
 import shijing.tianqu.runtime.rememberNavigator
 import shijing.tianqu.runtime.service.ServiceManager
 
@@ -67,10 +67,15 @@ fun App() {
         }
     }
 
+    // 支持物理返回键 / 手势返回（当导航栈中多于1个页面时启用拦截并出栈）
+    BackHandler(enabled = navigator.backStack.size > 1) {
+        navigator.pop()
+    }
+
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             // 使用路由框架提供的 Host 组件，承载整个应用的 UI
-            RouteHost(
+            RouterHost(
                 navigator = navigator
             )
         }

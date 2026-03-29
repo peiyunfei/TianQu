@@ -92,11 +92,10 @@ fun rememberNavigator(
  * @param modifier 修饰符
  */
 @Composable
-fun RouteHost(
+fun RouterHost(
     navigator: Navigator,
     modifier: Modifier = Modifier
 ) {
-    println("yunfei RouterHost")
     val isPop = navigator.lastAction == NavigationAction.POP ||
                 navigator.lastAction == NavigationAction.POP_TO_ROOT ||
                 navigator.lastAction == NavigationAction.POP_UNTIL
@@ -114,8 +113,6 @@ fun RouteHost(
     }
 
     CompositionLocalProvider(LocalNavigator provides navigator) {
-        println("yunfei CompositionLocalProvider")
-        println("yunfei -------------------------------------------------------")
         Box(modifier = modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
             // 使用策略模式遍历并渲染各种类型的页面
             // 这种方式将 RouterHost 与具体的渲染逻辑解耦，符合开闭原则（OCP）
