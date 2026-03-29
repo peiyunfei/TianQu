@@ -1,7 +1,7 @@
 [versions]
-tianqu-router-annotations = "1.0.0"
-tianqu-router-processor = "1.0.0"
-tianqu-router-runtime = "1.0.0"
+tianqu-router-annotations = "1.0.1"
+tianqu-router-processor = "1.0.1"
+tianqu-router-runtime = "1.0.1"
 agp = "8.11.2"
 android-compileSdk = "36"
 android-minSdk = "24"
