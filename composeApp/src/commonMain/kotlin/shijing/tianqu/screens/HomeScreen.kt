@@ -185,6 +185,19 @@ fun HomeScreen(context: RouterContext) {
             }
             Spacer(modifier = Modifier.height(12.dp))
 
+            // 演示协程并发预加载
+            Button(
+                onClick = {
+                    // 传递预渲染器，进行预渲染
+                    navigator.registerPreloader("/demo_preload", UserDetailPreloader())
+                    navigator.navigateTo("/demo_preload")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+            ) {
+                Text("演示协程并发数据预加载")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
             // 测试类型安全传参
             Button(
                 onClick = {

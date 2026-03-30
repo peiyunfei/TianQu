@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import shijing.tianqu.screens.UserDetailPreloader
 
 @Composable
 @Preview
@@ -45,11 +46,13 @@ fun App() {
         ServiceManager.init(GlobalRouteAggregator.services)
     }
 
+    val preloaders = remember { mapOf("/demo_preload" to UserDetailPreloader()) }
     // 初始化导航器实例，传入 KSP 生成的全局路由表和拦截守卫，并指定首页路径为嵌套路由容器 /main_tab
     val navigator = rememberNavigator(
         routes = GlobalRouteAggregator.routers,
         startRoute = "/main_tab",
-        guards = guards
+        guards = guards,
+        preloaders = preloaders
     )
 
     // 监听 Navigator 路由事件总线

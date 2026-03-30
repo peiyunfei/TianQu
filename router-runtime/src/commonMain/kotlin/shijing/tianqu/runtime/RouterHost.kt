@@ -62,18 +62,19 @@ fun rememberNavigator(
     startRoute: String,
     guards: List<RouterGuard> = emptyList(),
     routerHandler: RouterHandler? = null,
-    parent: Navigator? = null
+    parent: Navigator? = null,
+    preloaders: Map<String, RoutePreloader<*>> = emptyMap()
 ): Navigator {
     val coroutineScope = rememberCoroutineScope()
     
-    // 改为 rememberSaveable 并自定义 Saver 以在配置更改时保持 Navigator 状态
-    val navigator = remember(routes, guards, routerHandler, parent, coroutineScope) {
+    val navigator = remember(routes, guards, routerHandler, parent, coroutineScope, preloaders) {
         Navigator(
             routeRegistry = routes,
             guards = guards,
             routerHandler = routerHandler,
             parent = parent,
-            coroutineScope = coroutineScope
+            coroutineScope = coroutineScope,
+            preloaders = preloaders
         )
     }
     

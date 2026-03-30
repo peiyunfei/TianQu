@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import shijing.tianqu.router.RouteType
 import shijing.tianqu.runtime.LocalAnimatedVisibilityScope
 import shijing.tianqu.runtime.LocalSharedTransitionScope
+import shijing.tianqu.runtime.LocalStackEntry
 import shijing.tianqu.runtime.NavigationAction
 import shijing.tianqu.runtime.Navigator
 
@@ -75,7 +76,8 @@ class ScreenRouterRenderer : RouterRenderer {
                                 // 将当前页面的 StackEntry (它实现了 ViewModelStoreOwner) 注入给 Compose 上下文
                                 // 这样在该页面内调用 viewModel() 时，拿到的就会是与该页面生命周期绑定的 ViewModel
                                 CompositionLocalProvider(
-                                    LocalViewModelStoreOwner provides entry
+                                    LocalViewModelStoreOwner provides entry,
+                                    LocalStackEntry provides entry
                                 ) {
                                     entry.node.composable(entry.context)
                                 }

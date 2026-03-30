@@ -6,6 +6,7 @@ import shijing.tianqu.runtime.async.DeferredAsyncResult
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.cancel
 
 /**
@@ -15,7 +16,8 @@ data class StackEntry(
     val node: RouterNode,
     val context: RouterContext,
     val result: DeferredAsyncResult<Any?>? = null,
-    val id: String = generateEntryId()
+    val id: String = generateEntryId(),
+    val preloaderDeferred: Deferred<Any?>? = null
 ) : ViewModelStoreOwner {
     
     private var _viewModelStore: ViewModelStore? = null

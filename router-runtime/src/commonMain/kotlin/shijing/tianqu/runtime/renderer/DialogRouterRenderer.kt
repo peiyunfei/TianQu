@@ -9,6 +9,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import shijing.tianqu.router.RouteType
+import shijing.tianqu.runtime.LocalStackEntry
 import shijing.tianqu.runtime.Navigator
 
 /**
@@ -44,7 +45,8 @@ class DialogRouterRenderer : RouterRenderer {
                     // 渲染弹窗内容
                     // 将当前页面的 StackEntry (它实现了 ViewModelStoreOwner) 注入给 Compose 上下文
                     CompositionLocalProvider(
-                        LocalViewModelStoreOwner provides dialogEntry
+                        LocalViewModelStoreOwner provides dialogEntry,
+                        LocalStackEntry provides dialogEntry
                     ) {
                         dialogEntry.node.composable(dialogEntry.context)
                     }

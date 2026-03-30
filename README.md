@@ -489,7 +489,78 @@ fun TypeSafeScreen(context: RouterContext) {
 
 ---
 
-## 🔄 四、页面结果回传 (页面间双向通信)
+## ⚡️ 四、极致性能：非阻塞并发数据预加载 (Route Pre-fetching)
+
+传统的页面开发模式往往面临两难选择：要么**先跳转再请求**（进入页面后有一段骨架屏/Loading空白期等待数据），要么**先请求再跳转**（用户点击按钮后界面卡住无响应，等数据回来了才突然跳转）。
+
+天衢 路由作为一款**基于协程驱动**的现代框架，彻底解决了这个问题！我们提供了**页面跳转与数据加载并发执行**的预加载能力：
+在执行 `navigateTo` 的**毫秒级瞬间**，底层会通过 `async` 启动预加载协程，并在同时播放页面的 Compose 转场动画。我们完美利用了动画过渡的 300~500 毫秒“空窗期”，等动画播完时，数据往往已经加载完毕，实现真正的**“零秒开启、无缝平滑”**极致体验。完全不阻塞主线程！
+
+**步骤 1：定义你的预加载器 (实现 `RoutePreloader`)**
+```kotlin
+class UserDetailPreloader : RoutePreloader {
+    override suspend fun preload(context: RouterContext): Any? {
+        val userId = context.pathParams["id"] ?: return null
+        println("🚀 [后台线程] 开始预加载用户 $userId 的详细数据...")
+        
+        // 模拟耗时网络请求（此挂起不会阻塞 UI 线程与转场动画！）
+        delay(500)
+        
+        return UserDetailArgs(userId = userId.toLong(), username = "预加载大神", isVip = true, scores = emptyList())
+    }
+}
+```
+
+**步骤 2：注册到 Navigator 初始化中**
+```kotlin
+// 一定要先创建对象
+val preloaders = remember { mapOf("/demo_preload" to UserDetailPreloader()) }
+
+val navigator = rememberNavigator(
+    routes = GlobalRouteAggregator.routers,
+    startRoute = "/home",
+    preloaders = preloaders // 绑定路由路径与对应的预加载器
+)
+```
+请注意，不能通过下面的代码传递预加载器。 直接写 preloaders = mapOf(...)，这意味着每次重组时都会创建一个新的 Map 对象。
+rememberNavigator 会根据参数（包括 preloaders）来 remember 导航器。
+因为传进去的 Map 对象一直在变，导致 Compose 认为参数变了，从而不断地重新创建 Navigator 对象并清空页面栈，最终表现出来的就是不断刷新的“白屏”。
+```kotlin
+// 错误示例
+val navigator = rememberNavigator(
+    routes = GlobalRouteAggregator.routers,
+    startRoute = "/home",
+    preloaders = mapOf("/demo_preload" to UserDetailPreloader()) // 这是错误的写法
+)
+```
+如果不想在启动的时候就传递预加载器，可以在通过下面的方式
+```kotlin
+// 在跳转之前传递预加载器
+navigator.registerPreloader("/demo_preload", UserDetailPreloader())
+navigator.navigateTo("/demo_preload")
+```
+**步骤 3：在目标页面一键提取数据 (`rememberPreloadData<T>()`)**
+无需关心复杂的协程等待逻辑，框架在底层已经将获取到的 `Deferred` 无缝传递给了页面，使用即可：
+```kotlin
+@Router(path = "/user_detail/{id}")
+@Composable
+fun UserDetailScreen(context: RouterContext) {
+    // 🌟 在 Compose 中非阻塞地挂起等待预加载结果
+    val preloadedData = rememberPreloadData<UserDetailArgs>()
+
+    if (preloadedData == null) {
+        // 动画期间，由于数据还在飞奔请求中，可能会短暂显示 Loading
+        CircularProgressIndicator()
+    } else {
+        // 数据到达，直接渲染！此时转场动画可能刚巧播完，完美衔接！
+        Text("加载完毕，用户：${preloadedData.username}")
+    }
+}
+```
+
+---
+
+## 🔄 五、页面结果回传 (页面间双向通信)
 
 处理“选择联系人”、“修改设置后返回数据”等需求时，天衢 提供了极为优雅的挂起式协程解决方案。
 
@@ -556,7 +627,7 @@ Button(onClick = {
 
 ---
 
-## 🔌 五、跨模块解耦：服务发现 (Service Discovery)
+## 🔌 六、跨模块解耦：服务发现 (Service Discovery)
 
 路由不仅为了页面跳转，也是为了跨模块间的**接口调用与反向依赖注入**。上层 `app` 可以调用底层 `feature` 模块的具体实现，而无需互相强依赖。
 
@@ -616,7 +687,7 @@ fun fetchUserData() {
 
 ---
 
-## 🧬 六、ViewModel 与页面生命周期深度绑定
+## 🧬 七、ViewModel 与页面生命周期深度绑定
 
 原生的 `viewModel()` 在纯 Compose Multiplatform 项目中往往缺乏路由弹栈感知能力。TianQu 提供了与**单次页面路由同生共死**的专有 ViewModel：`tianquViewModel<T>()`。
 
@@ -661,7 +732,7 @@ fun DemoViewModelScreen() {
 
 ---
 
-## 🎨 七、其他极客能力全景公开
+## 🎨 八、其他极客能力全景公开
 
 ### 1. 多返回栈嵌套管理与 Tab 状态持久化
 App 主页往往包含底部的多个 Tab。TianQu 底层深度打通了 `SaveableStateHolder`，完美解决“切换 Tab 重新渲染导致输入内容与滚动条丢失”的问题。这是一种原生的“单宿主+多挂载点”轻量实现：
@@ -729,7 +800,7 @@ val navigator = rememberNavigator(GlobalRouteAggregator.routers, "/home")
 LaunchedEffect(navigator) {
     navigator.routeEvents.collect { event ->
         when (event) {
-            // 🌟 拦截到了空路由 /not_exist_page 
+            // 🌟 拦截到了空路由 /not_exist_page
             is shijing.tianqu.runtime.RouterEvent.NotFound -> {
                 println("⚠️ [全局降级拦截] 找不到路由: ${event.url}")
                 // 您可以选择在这里跳转到一个专用的 H5 容错升级页面，或者回退到首页
@@ -742,6 +813,7 @@ LaunchedEffect(navigator) {
     }
 }
 ```
+
 
 ---
 

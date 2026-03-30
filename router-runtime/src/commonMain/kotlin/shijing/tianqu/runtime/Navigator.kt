@@ -8,6 +8,8 @@ import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.RouterGuard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.launch
 import shijing.tianqu.runtime.async.AsyncResult
 import shijing.tianqu.runtime.async.DeferredAsyncResult
@@ -30,7 +32,8 @@ class Navigator(
     private val guards: List<RouterGuard> = emptyList(),
     private val routerHandler: RouterHandler? = null,
     val parent: Navigator? = null,
-    val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    preloaders: Map<String, RoutePreloader<*>> = emptyMap()
 ) : AbstractCoroutineContextElement(Navigator) {
 
     /**
@@ -53,6 +56,24 @@ class Navigator(
     var lastAction by mutableStateOf(NavigationAction.IDLE)
         private set
         
+    // 路由数据预加载器注册表
+    private val preloaders = mutableMapOf<String, RoutePreloader<*>>().apply {
+        putAll(preloaders)
+    }
+
+    /**
+     * 为指定路由注册一个预加载器。在导航到该路由时，框架会在后台自动并发调用预加载器。
+     * @param path 路由路径，例如 "/user/{id}"
+     * @param preloader 预加载器实现
+     */
+    fun <T> registerPreloader(path: String, preloader: RoutePreloader<T>) {
+        preloaders[path] = preloader
+    }
+
+    fun <T> registerPreloader(map: MutableMap<String, RoutePreloader<T>>) {
+        preloaders.putAll(map)
+    }
+
     // 基于协程挂起和恢复特性的自定义简易 SharedFlow 事件总线
     private val _routeEvents = MutableSimpleSharedFlow<RouterEvent>()
 
@@ -160,7 +181,18 @@ class Navigator(
             }
         }
 
-        val entry = StackEntry(matchedNode, context, result)
+        // 检查并触发预加载 (非阻塞式)
+        var preloaderDeferred: Deferred<Any?>? = null
+        val preloader = preloaders[matchedNode.path]
+        if (preloader != null) {
+            preloaderDeferred = coroutineScope.async {
+                runCatching {
+                    preloader.preload(context)
+                }.getOrNull()
+            }
+        }
+
+        val entry = StackEntry(matchedNode, context, result, preloaderDeferred = preloaderDeferred)
 
         when (action) {
             NavigationAction.PUSH -> backStack.add(entry)
