@@ -732,7 +732,90 @@ fun DemoViewModelScreen() {
 
 ---
 
-## 🎨 八、其他极客能力全景公开
+## 🧩 八、协程驱动的动态按需懒加载 (Dynamic Feature)
+
+在大型项目中，为了减小包体积或加快初始启动速度，某些业务模块可以设计为**动态下载与按需加载**。在传统路由中，这往往需要复杂的异步回调与占位页面。
+
+而在 天衢 路由中，得益于底层的协程 `suspend` 架构与强大的全局守卫 (`RouterGuard`)，您可以像写同步代码一样轻松实现**带有等待 UI 的动态模块加载**。
+
+**核心原理：**
+1. 业务层调用挂起函数 `navigator.push("/dynamic_route")`，并在协程外层控制 "Loading 转圈" UI 状态。
+2. 路由框架进行匹配，发现目标路由不存在。
+3. 全局 `RouterGuard` 拦截到请求，判断该 URL 属于某个未加载的模块。
+4. **守卫在内部使用 `suspend` 挂起执行下载逻辑（如下载 js bundle、加载 dex、或从服务器拉取配置）。**
+5. 下载完成后，守卫动态注册新模块的路由表：`navigator.registerDynamicRoutes(...)`。
+6. 守卫返回 `true`，拦截器放行。
+7. 框架自动完成向目标页面的跳转。
+8. 业务层 `navigator.push` 挂起恢复，隐藏 "Loading" 状态。
+
+**完整演示代码：**
+
+```kotlin
+// 1. 定义动态加载守卫
+class DynamicFeatureGuard : RouterGuard {
+    // 拦截特定前缀的路由
+    override fun matches(context: RouterContext): Boolean {
+        return context.url.startsWith("/dynamic_feature")
+    }
+
+    override suspend fun canActivate(context: RouterContext, chain: GuardChain): Boolean {
+        val navigator = chain.navigator
+        // 判断路由表中是否已经有了该页面，如果没有才需要模拟下载
+        if (navigator.backStack.none { it.url == context.url } &&
+            !navigator.hasRoute(context.url)) {
+            
+            println("正在异步下载并加载动态模块...")
+            // 模拟真实环境下的网络下载耗时
+            delay(2000)
+            
+            // 下载完成后，动态将新模块的节点注册进当前导航器中
+            navigator.registerDynamicRoutes(listOf(
+                RouterNode(
+                    path = "/dynamic_feature",
+                    composable = { ctx -> DynamicFeatureScreen(ctx) }
+                )
+            ))
+            println("动态模块加载完毕，路由已注册！")
+        }
+        
+        // 模块已就绪，放行
+        return chain.proceed(context)
+    }
+}
+
+// 2. 业务侧发起调用并展示 Loading UI
+@Composable
+fun HomeScreen() {
+    val navigator = LocalNavigator.current
+    val coroutineScope = rememberCoroutineScope()
+    // 维护按钮的加载状态
+    var isDynamicLoading by rememberSaveable { mutableStateOf(false) }
+
+    Button(
+        onClick = {
+            coroutineScope.launch {
+                isDynamicLoading = true // 1. 显示转圈
+                // 2. 使用 suspend 的 push()，它会等待所有异步守卫（包含下载）执行完毕
+                navigator.push("/dynamic_feature")
+                isDynamicLoading = false // 3. 页面跳转成功或被拒绝后，隐藏转圈
+            }
+        }
+    ) {
+        if (isDynamicLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("正在下载模块...")
+        } else {
+            Text("✨ 动态按需加载模块")
+        }
+    }
+}
+```
+通过这种方式，我们不仅完美隔离了底层模块的动态下载逻辑，同时让上层 UI 得到了优雅的状态管理，一切都得益于 Kotlin 协程 `suspend` 机制的强大力量。
+
+---
+
+## 🎨 九、其他极客能力全景公开
 
 ### 1. 多返回栈嵌套管理与 Tab 状态持久化
 App 主页往往包含底部的多个 Tab。TianQu 底层深度打通了 `SaveableStateHolder`，完美解决“切换 Tab 重新渲染导致输入内容与滚动条丢失”的问题。这是一种原生的“单宿主+多挂载点”轻量实现：

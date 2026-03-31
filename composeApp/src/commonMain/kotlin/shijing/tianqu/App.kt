@@ -18,14 +18,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import shijing.tianqu.screens.DynamicFeatureGuard
 import shijing.tianqu.screens.UserDetailPreloader
 
 @Composable
 @Preview
 fun App() {
     // 示例：创建一个简单的局部路由守卫（只拦截特定路由）
+    val dynamicGuard = remember { DynamicFeatureGuard() }
     val guards = remember {
         listOf(
+            dynamicGuard,
             object : RouterGuard {
                 // 重写 matches 方法，实现局部拦截
                 override fun matches(context: RouterContext): Boolean {
@@ -54,6 +57,7 @@ fun App() {
         guards = guards,
         preloaders = preloaders
     )
+    dynamicGuard.navigator = navigator
 
     // 监听 Navigator 路由事件总线
     LaunchedEffect(navigator) {

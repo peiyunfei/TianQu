@@ -38,6 +38,8 @@ data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
 @Composable
 fun HomeScreen(context: RouterContext) {
     val navigator = LocalNavigator.current
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    var isDynamicLoading by rememberSaveable { mutableStateOf(false) }
     
     // 增加一个测试状态，用于验证切换回来时状态是否丢失
     var testCounter by rememberSaveable { mutableStateOf(0) }
@@ -163,6 +165,32 @@ fun HomeScreen(context: RouterContext) {
             ) {
                 Text("跨模块导航 (Feature B)")
             }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 演示动态模块懒加载
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        isDynamicLoading = true
+                        navigator.push("/dynamic_feature")
+                        isDynamicLoading = false
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF009688))
+            ) {
+                if (isDynamicLoading) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("正在下载模块...", color = Color.White)
+                } else {
+                    Text("✨ 动态模块懒加载 (模拟网络下载)", color = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
 
             // 演示自定义动画
             Button(onClick = { navigator.navigateTo("/demo_anim") }) {

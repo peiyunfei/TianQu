@@ -28,7 +28,7 @@ import kotlin.coroutines.CoroutineContext
  * @param coroutineScope 用于执行异步路由守卫的协程作用域
  */
 class Navigator(
-    private val routeRegistry: List<RouterNode>,
+    initialRoutes: List<RouterNode>,
     private val guards: List<RouterGuard> = emptyList(),
     private val routerHandler: RouterHandler? = null,
     val parent: Navigator? = null,
@@ -41,6 +41,18 @@ class Navigator(
      * 类似 Compose 中的 Recomposer.kt 或者 AndroidUiDispatcher
      */
     companion object Key : CoroutineContext.Key<Navigator>
+
+    /**
+     * 动态路由注册表
+     */
+    private val routeRegistry = mutableListOf<RouterNode>().apply { addAll(initialRoutes) }
+
+    /**
+     * 动态注册路由节点（用于动态加载模块时注入新路由）
+     */
+    fun registerDynamicRoutes(routes: List<RouterNode>) {
+        routeRegistry.addAll(routes)
+    }
 
     /**
      * 当前应用的导航回退栈，保存了已访问页面的节点信息和对应的上下文数据
@@ -138,10 +150,22 @@ class Navigator(
         saveState: Boolean = false,
         restoreState: Boolean = false
     ): Boolean {
-        val (matchedNode, context) = prepareContext(url, extra)
+        var (matchedNode, context) = prepareContext(url, extra)
+
+        // 1. 先执行全局路由守卫 (因为拦截器内部可能涉及动态路由下载与注册，注册后就找得到了)
+        if (!GuardProcessor.processGuards(context, guards)) {
+            return false
+        }
+        
+        // 2. 如果拦截器执行完后，当初没找到节点，现在再找一次 (应对动态加载特性的场景)
+        if (matchedNode == null) {
+            val (newNode, newContext) = prepareContext(url, extra)
+            matchedNode = newNode
+            context = newContext
+        }
 
         if (matchedNode == null) {
-            // 如果未匹配到 Compose 路由节点，尝试交给外部路由处理
+            // 如果仍然未匹配到 Compose 路由节点，尝试交给外部路由处理
             if (routerHandler?.handleExternalRoute(context, this) == true || parent?.routerHandler?.handleExternalRoute(context, this) == true) {
                 // 外部路由处理了该事件，发送导航成功事件 (External)
                 coroutineScope.launch { emitEvent(RouterEvent.Navigated(action, url)) }
@@ -154,10 +178,6 @@ class Navigator(
             }
             // 直接发送页面不存在事件出去
             coroutineScope.launch { emitEvent(RouterEvent.NotFound(url)) }
-            return false
-        }
-
-        if (!GuardProcessor.processGuards(context, guards)) {
             return false
         }
 
@@ -186,9 +206,12 @@ class Navigator(
         val preloader = preloaders[matchedNode.path]
         if (preloader != null) {
             preloaderDeferred = coroutineScope.async {
-                runCatching {
+                try {
                     preloader.preload(context)
-                }.getOrNull()
+                } catch (e: Exception) {
+                    // 内部捕获异常并作为返回值，避免 async 失败导致级联取消，同时消除 Job 传递警告
+                    e
+                }
             }
         }
 
@@ -232,6 +255,14 @@ class Navigator(
         coroutineScope.launch {
             processNavigation(url, extra, NavigationAction.PUSH, null, saveState, restoreState)
         }
+    }
+
+    /**
+     * 挂起式的导航方法：等待路由拦截器链（例如动态模块下载）执行完毕并完成入栈动作后恢复。
+     * 可以让调用方（如业务层面的 UI）在调用前后方便地显示和隐藏 Loading 状态。
+     */
+    suspend fun push(url: String, extra: Any? = null, saveState: Boolean = false, restoreState: Boolean = false): Boolean {
+        return processNavigation(url, extra, NavigationAction.PUSH, null, saveState, restoreState)
     }
     
     /**

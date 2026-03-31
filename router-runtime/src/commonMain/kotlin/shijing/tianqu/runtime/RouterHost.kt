@@ -69,7 +69,7 @@ fun rememberNavigator(
     
     val navigator = remember(routes, guards, routerHandler, parent, coroutineScope, preloaders) {
         Navigator(
-            routeRegistry = routes,
+            initialRoutes = routes,
             guards = guards,
             routerHandler = routerHandler,
             parent = parent,

@@ -25,20 +25,26 @@ val LocalStackEntry = compositionLocalOf<StackEntry?> { null }
 /**
  * 在页面内获取预加载的数据
  * 如果配置了该路由的 preloader，则在进入页面后自动 await 等待数据。
- * @return 带有状态的数据。如果还在加载或者异常则为 null。
+ * @return 带有状态的数据。如果还在加载则为 null，加载完成或异常则返回 Result 对象包裹。
  */
 @Composable
-inline fun <reified T> rememberPreloadData(): State<T?> {
+inline fun <reified T> rememberPreloadData(): State<Result<T>?> {
     val entry = LocalStackEntry.current
-    val deferred = entry?.preloaderDeferred as? Deferred<T>
-    val state = remember { mutableStateOf<T?>(null) }
+    val deferred = entry?.preloaderDeferred
+    val state = remember { mutableStateOf<Result<T>?>(null) }
 
     LaunchedEffect(deferred) {
         if (deferred != null) {
             try {
-                state.value = deferred.await()
+                val data = deferred.await()
+                if (data is Exception) {
+                    state.value = Result.failure(data)
+                } else {
+                    @Suppress("UNCHECKED_CAST")
+                    state.value = Result.success(data as T)
+                }
             } catch (e: Exception) {
-                // Ignore or log error
+                state.value = Result.failure(e)
                 e.printStackTrace()
             }
         }
