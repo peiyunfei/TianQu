@@ -15,6 +15,7 @@
 5. **跨模块服务发现**：轻松实现接口下沉与依赖反转，提供优雅的 `rememberService<T>()` 协程安全服务发现能力。
 6. **生命周期与 ViewModel 绑定**：内置专属页面作用域，提供 `tianquViewModel<T>()`，页面出栈时自动销毁 ViewModel 与协程作用域，彻底告别内存泄漏。
 7. **高级导航表现**：内置单例模式控制、多返回栈（无缝衔接底层 Tab 栏）、自定义动画过渡、Compose 共享元素动画 (Shared Element) 及 404 全局降级。
+8. **离线 DeepLink 意图缓存**：内置基于协程 `Channel` 的意图队列，完美解决 App 冷启动时外部唤起导致路由丢失的问题。
 
 ---
 
@@ -887,6 +888,21 @@ LaunchedEffect(navigator) {
     }
 }
 ```
+
+### 4. 离线 DeepLink 意图缓存 (Offline DeepLink Caching)
+当应用在后台被系统杀死，或者尚未启动时，用户通过外部 DeepLink 唤起 App。此时底层的 UI 引擎和 `Navigator` 尚未初始化完毕，如果直接执行跳转，意图将会丢失。
+天衢 路由内置了 `DeepLinkManager`，利用协程无界 `Channel` 实现了离线意图的 FIFO 缓存。
+
+**步骤 1：在原生平台入口接收并分发 DeepLink**
+```kotlin
+// Android MainActivity.kt 或 iOS AppDelegate
+// 此时 Compose 和 Navigator 可能还未初始化
+val url = intent.data?.toString() ?: return
+DeepLinkManager.dispatch(url)
+```
+
+**步骤 2：Navigator 自动消费**
+当 `Navigator` 初始化完成后，它会自动在内部协程中收集并消费这些被缓存的意图，确保用户无缝跳转到目标页面，绝不丢失任何一次外部唤醒！
 
 
 ---

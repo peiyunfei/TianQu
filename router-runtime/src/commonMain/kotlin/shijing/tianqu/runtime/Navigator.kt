@@ -42,6 +42,16 @@ class Navigator(
      */
     companion object Key : CoroutineContext.Key<Navigator>
 
+    init {
+        // 监听全局离线 DeepLink 意图队列
+        // 当 Navigator 初始化完毕后，开始消费之前堆积的意图
+        coroutineScope.launch {
+            DeepLinkManager.pendingIntents.collect { url ->
+                navigateTo(url)
+            }
+        }
+    }
+
     /**
      * 动态路由注册表
      */
