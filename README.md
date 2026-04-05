@@ -41,9 +41,9 @@
 
 ```toml
 [versions]
-tianqu-router-annotations = "1.0.2" # 替换为最新版本号
-tianqu-router-processor = "1.0.2"
-tianqu-router-runtime = "1.0.2"
+tianqu-router-annotations = "1.0.3" # 替换为最新版本号
+tianqu-router-processor = "1.0.3"
+tianqu-router-runtime = "1.0.3"
 ksp = "2.1.10-1.0.31" # 请务必与您项目的 Kotlin 版本一致
 
 [libraries]
@@ -165,9 +165,7 @@ import shijing.tianqu.runtime.service.ServiceManager
 @Composable
 fun App() {
     // 1. 初始化跨模块 Service 通信大表
-    LaunchedEffect(Unit) {
-        ServiceManager.init(GlobalRouteAggregator.services)
-    }
+   ServiceManager.init(GlobalRouteAggregator.services)
 
    // 示例：创建一个简单的局部路由守卫（只拦截特定路由）
    val guards = remember {
@@ -402,16 +400,9 @@ fun ProfileScreen(context: RouterContext) {
 在项目根目录或 `gradle/libs.versions.toml` 中配置：
 ```toml
 [versions]
-tianqu-router-annotations = "1.0.2" # 替换为最新版本号
-tianqu-router-processor = "1.0.2"
-tianqu-router-runtime = "1.0.2"
 kotlinx-serialization = "1.6.3"
-ksp = "2.1.10-1.0.31" # 请务必与您项目的 Kotlin 版本一致
 
 [libraries]
-tianqu-router-annotations = { module = "io.gitee.zhongte:tianqu-router-annotations", version.ref = "tianqu-router-annotations" }
-tianqu-router-processor = { module = "io.gitee.zhongte:tianqu-router-processor", version.ref = "tianqu-router-processor" }
-tianqu-router-runtime = { module = "io.gitee.zhongte:tianqu-router-runtime", version.ref = "tianqu-router-runtime" }
 # 序列化
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 

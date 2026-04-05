@@ -7,4 +7,4 @@ package shijing.tianqu.router.aggregation
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class ModuleRouteRegistry
+annotation class ModuleRouterRegistry

@@ -29,13 +29,13 @@ class DefaultServiceResolver : ServiceResolver {
     // 缓存已经实例化完成的 Service 对象（用于同步快速获取）
     private val syncInstances = mutableMapOf<KClass<*>, Any>()
 
-    // 存储接口与其实现类工厂方法的映射
+    // 存储接口与其实现类的"工厂方法"映射，来源于 KSP 自动生成
     private val providers = mutableMapOf<KClass<*>, () -> Any>()
     
     // 互斥锁，保证在并发获取同一个 Service 时，工厂只被调用一次
     private val mutex = Mutex()
 
-    // 用于后台异步初始化服务的协程作用域
+    // 专属的协程作用域，运行在默认后台线程池 (Dispatchers.Default)，SupervisorJob 确保一个子协程失败不影响其他协程
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun init(registryProviders: Map<KClass<*>, () -> Any>) {
@@ -69,19 +69,24 @@ class DefaultServiceResolver : ServiceResolver {
         val result = DeferredAsyncResult<T?>()
         
         scope.launch {
+            // 使用 Mutex 互斥锁包围核心的"获取或创建"逻辑，保证绝对的线程安全
             val deferred = mutex.withLock {
+                // 如果 deferredInstances 里没有该类，就执行大括号里的逻辑创建一个新的 Deferred 放入
                 deferredInstances.getOrPut(clazz) {
+                    // 二次检查同步缓存 (Double Check Locking 思想)
                     if (syncInstances.containsKey(clazz)) {
                         CompletableDeferred(syncInstances[clazz])
                     } else {
                         val provider = providers[clazz]
                         if (provider != null) {
+                            // 启动一个新的后台异步任务(async)去实例化对象
                             scope.async {
                                 val instance = provider()
                                 syncInstances[clazz] = instance
-                                instance
+                                instance // 返回结果
                             }
                         } else {
+                            // 如果找不到服务，返回一个直接完结的 Deferred(null)
                             CompletableDeferred<Any?>().apply { complete(null) }
                         }
                     }
@@ -90,7 +95,9 @@ class DefaultServiceResolver : ServiceResolver {
             
             try {
                 @Suppress("UNCHECKED_CAST")
+                // 等待对象创建完成（如果已经在创建中，这里会挂起等待；如果已经创建完，立刻继续）
                 val resolvedInstance = deferred.await() as? T
+                // 将真实实例通过 complete 推给调用方
                 result.complete(resolvedInstance)
             } catch (e: Exception) {
                 result.complete(null)

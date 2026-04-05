@@ -8,6 +8,7 @@ import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.writeTo
 import shijing.tianqu.router.Transition
+import shijing.tianqu.router.aggregation.ModuleTransitionRegistry
 
 /**
  * 负责扫描带有 @Transition 注解的类，生成过渡动画的注册表
@@ -73,7 +74,9 @@ class TransitionRegistryGeneratorStrategy(private val moduleName: String = "Defa
 
         // 创建 TransitionStrategyRegistry Object
         val typeSpec = TypeSpec.objectBuilder(className)
-            .addAnnotation(ClassName("shijing.tianqu.router.aggregation", "ModuleTransitionRegistry"))
+            // 加上特制聚合注解，给全局扫描提供入口
+            .addAnnotation(ClassName(ModuleTransitionRegistry::class.java.packageName,
+                ModuleTransitionRegistry::class.simpleName ?: ""))
             .addProperty(propertySpec)
             .build()
 

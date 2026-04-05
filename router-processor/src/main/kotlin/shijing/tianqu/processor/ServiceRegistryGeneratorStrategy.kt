@@ -8,6 +8,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.writeTo
+import shijing.tianqu.router.aggregation.ModuleServiceRegistry
 
 /**
  * 负责生成 ServiceRegistry 的具体策略
@@ -45,6 +46,7 @@ class ServiceRegistryGeneratorStrategy(private val moduleName: String = "Default
                 )
 
                 val comma = if (index < classes.size - 1) ",\n" else "\n"
+                // 告别反射，生成 Lambda 函数 `{ ImplClass() }` 以供运行时无反射懒加载调用
                 initBlock.add(
                     "%T::class to { %T() }%L",
                     interfaceName,
@@ -63,7 +65,9 @@ class ServiceRegistryGeneratorStrategy(private val moduleName: String = "Default
             .build()
 
         val typeSpec = TypeSpec.objectBuilder(className)
-            .addAnnotation(ClassName("shijing.tianqu.router.aggregation", "ModuleServiceRegistry"))
+            // 加上特制聚合注解，给全局扫描提供入口
+            .addAnnotation(ClassName(ModuleServiceRegistry::class.java.packageName,
+                ModuleServiceRegistry::class.simpleName ?: ""))
             .addProperty(propertySpec)
             .build()
 

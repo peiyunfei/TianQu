@@ -45,9 +45,7 @@ fun App() {
     }
 
     // 初始化 ServiceManager (模块间通信)
-    LaunchedEffect(Unit) {
-        ServiceManager.init(GlobalRouteAggregator.services)
-    }
+    ServiceManager.init(GlobalRouteAggregator.services)
 
     val preloaders = remember { mapOf("/demo_preload" to UserDetailPreloader()) }
     // 初始化导航器实例，传入 KSP 生成的全局路由表和拦截守卫，并指定首页路径为嵌套路由容器 /main_tab

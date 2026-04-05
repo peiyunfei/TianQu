@@ -9,6 +9,7 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.writeTo
 import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
+import shijing.tianqu.router.aggregation.ModuleRouterRegistry
 
 /**
  * 负责生成 RouteRegistry 的具体策略
@@ -17,17 +18,17 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
     override fun generate(symbols: List<KSFunctionDeclaration>, codeGenerator: CodeGenerator, logger: KSPLogger) {
         val functions = symbols
         val packageName = "shijing.tianqu.router.generated"
-        val className = "RouteRegistry_$moduleName"
+        val className = "RouterRegistry_$moduleName"
 
         // 引入 Compose 的注解
         val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
         // 引入 RouteContext
         val routeContextClass = ClassName("shijing.tianqu.router", "RouterContext")
         
-        // 定义生成代码中的 RouteNode 数据类类型
+        // 定义生成代码中的 RouterNode 数据类类型
         val routeNodeType = ClassName("shijing.tianqu.runtime", "RouterNode")
 
-        // 构建 List 的类型：List<RouteNode>
+        // 构建 List 的类型：List<RouterNode>
         val listType = ClassName("kotlin.collections", "List").parameterizedBy(routeNodeType)
 
         // 生成初始化 List 的代码块
@@ -68,9 +69,9 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
 
             val comma = if (index < functions.size - 1) ",\n" else "\n"
             
-            // 构造 RouteNode 实例
-            // RouteNode(path, regexPattern, transition, { context -> func(context) })
-            // 只有当目标函数接受 RouteContext 参数时才传递
+            // 构造 RouterNode 实例
+            // RouterNode(path, regexPattern, transition, { context -> func(context) })
+            // 只有当目标函数接受 RouterContext 参数时才传递
 
             val hasContextParam = func.parameters.any {
                 it.type.resolve().declaration.qualifiedName?.asString() == RouterContext::class.qualifiedName
@@ -83,7 +84,7 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
             }
 
             // 在生成路由表时，通过 TransitionStrategyRegistry_$moduleName 去获取动画策略的实例工厂
-            val transitionInstantiateStr = "shijing.tianqu.router.generated.TransitionStrategyRegistry_$moduleName.transitions[%S]?.invoke() ?: shijing.tianqu.runtime.transition.SlideTransitionStrategy()"
+            val transitionInstantiateStr = "TransitionStrategyRegistry_$moduleName.transitions[%S]?.invoke() ?: shijing.tianqu.runtime.transition.SlideTransitionStrategy()"
 
             initBlock.add(
                 "RouterNode(\n" +
@@ -109,9 +110,11 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
             .initializer("%L", initBlock.build())
             .build()
 
-        // 创建 RouteRegistry Object
+        // 创建 RouterRegistry Object
         val typeSpec = TypeSpec.objectBuilder(className)
-            .addAnnotation(ClassName("shijing.tianqu.router.aggregation", "ModuleRouteRegistry"))
+            // 加上特制聚合注解，给全局扫描提供入口
+            .addAnnotation(ClassName(ModuleRouterRegistry::class.java.packageName,
+                ModuleRouterRegistry::class.simpleName ?: ""))
             .addProperty(propertySpec)
             .build()
 
@@ -125,9 +128,9 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
             val dependencies = Dependencies(aggregating = true, *functions.mapNotNull { it.containingFile }.toTypedArray())
             fileSpec.writeTo(codeGenerator, dependencies)
             // 使用 warn 来保证在 Gradle 默认控制台中能够看到成功的输出
-            logger.warn("----> Generated RouteRegistry successfully with ${functions.size} routes. <----")
+            logger.warn("----> Generated RouterRegistry successfully with ${functions.size} routes. <----")
         } catch (e: Exception) {
-            logger.error("Error generating RouteRegistry: ${e.message}")
+            logger.error("Error generating RouterRegistry: ${e.message}")
         }
     }
 }

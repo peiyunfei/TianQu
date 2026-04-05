@@ -32,9 +32,7 @@ class DialogRouterRenderer : RouterRenderer {
             ) {
                 // 为弹窗保留并提供状态作用域
                 saveableStateHolder.SaveableStateProvider(dialogEntry.id) {
-                    val entryScope = rememberCoroutineScope()
                     DisposableEffect(dialogEntry) {
-                        dialogEntry.scope = entryScope
                         onDispose {
                             // 弹窗关闭时，彻底清理其状态
                             if (!navigator.isEntryAlive(dialogEntry)) {

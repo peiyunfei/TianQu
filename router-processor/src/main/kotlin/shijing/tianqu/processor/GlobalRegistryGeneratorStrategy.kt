@@ -8,6 +8,9 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.writeTo
+import shijing.tianqu.router.aggregation.ModuleRouterRegistry
+import shijing.tianqu.router.aggregation.ModuleServiceRegistry
+import shijing.tianqu.router.aggregation.ModuleTransitionRegistry
 
 /**
  * 全局注册表生成策略。
@@ -28,21 +31,15 @@ class GlobalRegistryGeneratorStrategy(private val resolver: Resolver) : CodeGene
             .filterIsInstance<KSClassDeclaration>()
             .toList()
 
-        // 1. 获取所有模块的 RouteRegistry
-        val routeRegistries = (resolver.getSymbolsWithAnnotation("shijing.tianqu.router.aggregation.ModuleRouteRegistry")
-            .filterIsInstance<KSClassDeclaration>() + packageDeclarations.filter { it.simpleName.asString().startsWith("RouteRegistry_") })
+        // 1. 获取所有模块的 RouterRegistry
+        val routeRegistries = (resolver.getSymbolsWithAnnotation(ModuleRouterRegistry::class.qualifiedName ?: "")
+            .filterIsInstance<KSClassDeclaration>() + packageDeclarations.filter { it.simpleName.asString().startsWith("RouterRegistry_") })
             .distinct()
             .toList()
 
         // 2. 获取所有模块的 ServiceRegistry
-        val serviceRegistries = (resolver.getSymbolsWithAnnotation("shijing.tianqu.router.aggregation.ModuleServiceRegistry")
+        val serviceRegistries = (resolver.getSymbolsWithAnnotation(ModuleServiceRegistry::class.qualifiedName ?: "")
             .filterIsInstance<KSClassDeclaration>() + packageDeclarations.filter { it.simpleName.asString().startsWith("ServiceRegistry_") })
-            .distinct()
-            .toList()
-
-        // 3. 获取所有模块的 TransitionRegistry
-        val transitionRegistries = (resolver.getSymbolsWithAnnotation("shijing.tianqu.router.aggregation.ModuleTransitionRegistry")
-            .filterIsInstance<KSClassDeclaration>() + packageDeclarations.filter { it.simpleName.asString().startsWith("TransitionStrategyRegistry_") })
             .distinct()
             .toList()
 
@@ -52,7 +49,7 @@ class GlobalRegistryGeneratorStrategy(private val resolver: Resolver) : CodeGene
         // 方案：生成 properties，把所有的 List/Map 合并起来。
         // val allRouters: List<RouterNode> = ModuleA.routers + ModuleB.routers ...
         
-        // RouteNode
+        // RouterNode
         val routeNodeType = ClassName("shijing.tianqu.runtime", "RouterNode")
         val listType = ClassName("kotlin.collections", "List").parameterizedBy(routeNodeType)
 
@@ -61,13 +58,6 @@ class GlobalRegistryGeneratorStrategy(private val resolver: Resolver) : CodeGene
         val anyType = ClassName("kotlin", "Any")
         val functionType = LambdaTypeName.get(returnType = anyType)
         val serviceMapType = ClassName("kotlin.collections", "Map").parameterizedBy(kClassType, functionType)
-
-        // Transitions
-        val transitionStrategyType = ClassName("shijing.tianqu.runtime.transition", "TransitionStrategy")
-        val transitionMapType = ClassName("kotlin.collections", "Map").parameterizedBy(
-            ClassName("kotlin", "String"),
-            LambdaTypeName.get(returnType = transitionStrategyType)
-        )
 
         // 生成合并 Routers 的代码
         val routersInit = CodeBlock.builder().add("listOf<%T>()", routeNodeType)
@@ -83,13 +73,6 @@ class GlobalRegistryGeneratorStrategy(private val resolver: Resolver) : CodeGene
             servicesInit.add(" + %T.services", registryClass)
         }
 
-        // 生成合并 Transitions 的代码
-        val transitionsInit = CodeBlock.builder().add("emptyMap<%T, %T>()", ClassName("kotlin", "String"), LambdaTypeName.get(returnType = transitionStrategyType))
-        transitionRegistries.forEach { registry ->
-            val registryClass = ClassName(registry.packageName.asString(), registry.simpleName.asString())
-            transitionsInit.add(" + %T.transitions", registryClass)
-        }
-
         val routersProperty = PropertySpec.builder("routers", listType)
             .initializer(routersInit.build())
             .build()
@@ -98,15 +81,10 @@ class GlobalRegistryGeneratorStrategy(private val resolver: Resolver) : CodeGene
             .initializer(servicesInit.build())
             .build()
 
-        val transitionsProperty = PropertySpec.builder("transitions", transitionMapType)
-            .initializer(transitionsInit.build())
-            .build()
-
         // 创建 GlobalRouteAggregator Object
         val typeSpec = TypeSpec.objectBuilder(className)
             .addProperty(routersProperty)
             .addProperty(servicesProperty)
-            .addProperty(transitionsProperty)
             .build()
 
         // 创建文件
@@ -116,10 +94,10 @@ class GlobalRegistryGeneratorStrategy(private val resolver: Resolver) : CodeGene
 
         try {
             // Aggregating true is necessary as it depends on newly found classes
-            val sourceFiles = (routeRegistries + serviceRegistries + transitionRegistries).mapNotNull { it.containingFile }.toTypedArray()
+            val sourceFiles = (routeRegistries + serviceRegistries).mapNotNull { it.containingFile }.toTypedArray()
             val dependencies = Dependencies(aggregating = true, *sourceFiles)
             fileSpec.writeTo(codeGenerator, dependencies)
-            logger.warn("----> Generated GlobalRouteAggregator successfully. Modules: Routers(${routeRegistries.size}), Services(${serviceRegistries.size}), Transitions(${transitionRegistries.size}) <----")
+            logger.warn("----> Generated GlobalRouteAggregator successfully. Modules: Routers(${routeRegistries.size}), Services(${serviceRegistries.size}) <----")
         } catch (e: Exception) {
             logger.error("Error generating GlobalRouteAggregator: ${e.message}")
         }

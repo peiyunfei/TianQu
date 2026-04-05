@@ -27,6 +27,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.rememberCoroutineScope
 
 // 定义一个用于演示对象传递的数据类
 data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
@@ -38,7 +39,7 @@ data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
 @Composable
 fun HomeScreen(context: RouterContext) {
     val navigator = LocalNavigator.current
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
     var isDynamicLoading by rememberSaveable { mutableStateOf(false) }
     
     // 增加一个测试状态，用于验证切换回来时状态是否丢失
@@ -199,7 +200,7 @@ fun HomeScreen(context: RouterContext) {
             Spacer(modifier = Modifier.height(12.dp))
             
             // 演示查询参数和深层链接格式
-            Button(onClick = { navigator.navigateTo("app://shijing.tianqu/user/999?source=home_banner&vip=true") }) {
+            Button(onClick = { navigator.navigateTo("app://shijing.tianqu/user/999?source=首页&vip=true") }) {
                 Text("打开深层链接 (带查询参数)")
             }
             Spacer(modifier = Modifier.height(12.dp))

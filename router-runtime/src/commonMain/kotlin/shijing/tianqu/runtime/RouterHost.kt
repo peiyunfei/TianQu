@@ -50,7 +50,7 @@ val LocalNavigator = compositionLocalOf<Navigator> {
  * 记住并创建一个 Navigator 实例。
  * 它会在第一次组合时使用提供的路由表和守卫列表进行初始化，并自动导航到指定的起始路由。
  *
- * @param routes 由 KSP 生成的路由节点列表（通常为 RouteRegistry.routers）
+ * @param routes 由 KSP 生成的路由节点列表（通常为 GlobalRouteAggregator.routers）
  * @param startRoute 应用程序的初始路由地址（例如 "/home"）
  * @param guards 可选的路由守卫列表，可以通过重写 guard.matches 来实现局部拦截
  * @param parent 父级 Navigator（用于嵌套路由中的事件向上传递），默认为当前上下文中的 LocalNavigator
@@ -78,10 +78,8 @@ fun rememberNavigator(
         )
     }
     
-    LaunchedEffect(navigator, startRoute) {
-        if (navigator.backStack.isEmpty()) {
-            navigator.navigateTo(startRoute)
-        }
+    if (navigator.backStack.isEmpty()) {
+        navigator.navigateTo(startRoute)
     }
     return navigator
 }
@@ -97,18 +95,16 @@ fun RouterHost(
     navigator: Navigator,
     modifier: Modifier = Modifier
 ) {
-    val isPop = navigator.lastAction == NavigationAction.POP ||
-                navigator.lastAction == NavigationAction.POP_TO_ROOT ||
-                navigator.lastAction == NavigationAction.POP_UNTIL
-
     // 将 state holder 提升作用域或使用单一实例，确保 tab 切换等场景不被重置
     // 由于 RouterHost 通常在全局只挂载一次，这里的 rememberSaveableStateHolder 是安全的
     val saveableStateHolder = rememberSaveableStateHolder()
 
     // 动态注册不同类型的路由渲染策略（如果未来有 BottomSheet 等，直接在这里添加即可）
-    val routeRenderers = remember {
+    val routerRenderers = remember {
         listOf(
+            // 负责渲染全屏页面和转场动画
             ScreenRouterRenderer(),
+            // 负责渲染悬浮弹窗
             DialogRouterRenderer()
         )
     }
@@ -117,7 +113,7 @@ fun RouterHost(
         Box(modifier = modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
             // 使用策略模式遍历并渲染各种类型的页面
             // 这种方式将 RouterHost 与具体的渲染逻辑解耦，符合开闭原则（OCP）
-            routeRenderers.forEach { renderer ->
+            routerRenderers.forEach { renderer ->
                 renderer.Render(navigator = navigator, saveableStateHolder = saveableStateHolder)
             }
         }

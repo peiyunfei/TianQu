@@ -35,6 +35,7 @@ object ServiceManager {
 
     /**
      * 同步获取指定接口的服务实现实例（内联版本）。
+     * 开发者调用时不需要传 T::class，直接写 ServiceManager.getService<UserService>()
      */
     inline fun <reified T : Any> getService(): T? {
         return getService(T::class) as? T

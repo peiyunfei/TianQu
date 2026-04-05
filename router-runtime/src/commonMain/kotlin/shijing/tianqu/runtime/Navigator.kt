@@ -21,7 +21,7 @@ import kotlin.coroutines.CoroutineContext
  * 导航器核心类，负责管理应用内的页面栈。
  * 它持有由 KSP 生成的路由节点注册表，并在导航过程中协调解析器、拦截器和栈管理。
  *
- * @param routeRegistry 包含所有通过 @Router 注解生成的路由节点列表
+ * @param initialRoutes 包含所有通过 @Router 注解生成的路由节点列表
  * @param guards 注册在当前导航器中的路由守卫列表，用于在导航跳转前进行拦截验证
  * @param routerHandler 页面不存在，进行降级处理
  * @param parent 父导航器，用于嵌套路由时向上传递返回事件
@@ -55,16 +55,23 @@ class Navigator(
     }
 
     /**
-     * 当前应用的导航回退栈，保存了已访问页面的节点信息和对应的上下文数据
+     * 当前应用的导航回退栈，保存了已访问页面的节点信息和对应的上下文数据。
+     * mutableStateListOf是Compose独有的状态列表。只要往这个列表添加或者移除元素，Compose就会自动触发重组，从而更新 UI。
+     * 这就是为什么Navigator只需要操作数据，界面就能自动切换的原因。
      */
     val backStack = mutableStateListOf<StackEntry>()
     
     /**
-     * 用于保存被切走的后备栈（支持多返回栈 / Tab 切换）
+     * 用于保存被切走的后备栈（支持多返回栈 / Tab 切换）。
+     * 这是为了支持多 Tab 切换设计的。当从首页Tab切到我的Tab时，如果不保存状态，首页的滚动位置和历史记录就丢了。
+     * 这个 Map 就是把被隐藏的 Tab 的回退栈（List）完整打包存起来，等切回来时再原封不动地放回 backStack 中。
      */
     private val savedStateStacks = mutableMapOf<String, List<StackEntry>>()
-    
-    // 记录最后一次导航动作，以便在过渡动画中准确判断是进入还是退出
+
+    /**
+     * 记录最后一次导航动作，以便在过渡动画中准确判断是进入还是退出
+     * 使用 `mutableStateOf`。记录刚才是进入还是退出，路由容器（RouterHost）会监听这个状态，决定此时页面切换该用左滑动画还是右滑退出动画。
+     */
     var lastAction by mutableStateOf(NavigationAction.IDLE)
         private set
         
@@ -86,7 +93,11 @@ class Navigator(
         preloaders.putAll(map)
     }
 
-    // 基于协程挂起和恢复特性的自定义简易 SharedFlow 事件总线
+    /**
+     * 基于协程挂起和恢复特性的自定义简易 SharedFlow 事件总线。
+     * 跳转成功了没？拦截器生效了吗？页面找不到（404）怎么办？外部系统（比如全局弹窗、数据上报层）需要知道路由动作。
+     * 与其到处写回调，不如暴露一个冷流（基于挂起的 SharedFlow），让外部按需 `collect`。这也是响应式编程的最佳实践。
+     */
     private val _routeEvents = MutableSimpleSharedFlow<RouterEvent>()
 
     /**
@@ -113,6 +124,13 @@ class Navigator(
     }
 
     /**
+     * 路由节点匹配缓存，避免同一个路径重复执行正则匹配
+     * Key: 纯路径 (例如 "/user/10086")
+     * Value: 匹配到的路由节点
+     */
+    private val matchedNodeCache = mutableMapOf<String, RouterNode>()
+
+    /**
      * 准备路由上下文并匹配路由节点
      */
     private fun prepareContext(url: String, extra: Any? = null): Pair<RouterNode?, RouterContext> {
@@ -134,9 +152,19 @@ class Navigator(
      * 查找匹配的路由节点
      */
     private fun findMatchedNode(path: String): RouterNode? {
-        return routeRegistry.find { node ->
+        // 1. 优先从缓存中查找
+        matchedNodeCache[path]?.let { return it }
+
+        // 2. 缓存未命中，执行正则匹配
+        val matched = routeRegistry.find { node ->
             Regex(node.regexPattern).matches(path)
         }
+
+        // 3. 匹配成功则加入缓存
+        if (matched != null) {
+            matchedNodeCache[path] = matched
+        }
+        return matched
     }
 
     /**
@@ -233,7 +261,6 @@ class Navigator(
             }
             else -> {}
         }
-        
         // 发送导航成功事件
         coroutineScope.launch {
             emitEvent(RouterEvent.Navigated(action, url))
