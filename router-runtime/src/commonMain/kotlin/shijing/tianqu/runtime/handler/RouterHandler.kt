@@ -16,15 +16,15 @@ interface RouterHandler {
      * @param navigator 导航器核心类，负责管理应用内的页面栈
      * @return true 外部路由已经处理了，默认不处理
      */
-    fun handleExternalRoute(context: RouterContext, navigator: Navigator): Boolean = false
+    suspend fun handleExternalRoute(context: RouterContext, navigator: Navigator): Boolean = false
 
     /**
-     *  页面不存在
+     * 页面不存在
      *
      * @param url 页面路径
      * @param navigator 导航器核心类，负责管理应用内的页面栈
      * @return true 处理了该事件，默认不处理
      */
-    fun handleNotFound(url: String, navigator: Navigator): Boolean = false
+    suspend fun handleNotFound(url: String, navigator: Navigator): Boolean = false
 
 }
