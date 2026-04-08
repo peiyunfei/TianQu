@@ -18,7 +18,7 @@
 3. **全自动跨模块聚合**：业务模块按需生成子路由表，App 主模块自动聚合所有子模块，彻底解决多模块组件化难题。
 4. **强大的传参机制**：支持 URL Path 变量 (`/user/{id}`)、Query 参数 (`?id=1`)、**复杂大对象 (`extra`)** 以及**基于数据类的强类型安全传递**。
 5. **跨模块服务发现**：轻松实现接口下沉与依赖反转，提供优雅的 `rememberService<T>()` 协程安全挂起加载，确保服务单例的线程与协程安全。
-6. **生命周期与 ViewModel 绑定**：内置专属页面作用域，提供 `tianquViewModel<T>()`。当页面出栈时，不仅自动销毁 ViewModel，还会**自动取消其绑定的所有协程任务**，彻底告别内存泄漏与空指针。
+6. **生命周期与 ViewModel 绑定**：内置专属页面作用域，提供 `tianquViewModel<T>()`。支持跨平台无反射的 `@InjectViewModel` 自动依赖注入 `tianQuViewModelInject<T>()`，当页面出栈时，不仅自动销毁 ViewModel，还会**自动取消其绑定的所有协程任务**，彻底告别内存泄漏与空指针。
 7. **并发预加载引擎**：内置基于 `CompletableDeferred` 的非阻塞预加载器 (`RoutePreloader`)。在转场动画播放的同时，后台协程高并发加载目标页数据，实现“瞬开”体验。
 8. **离线 DeepLink 意图缓存**：内置基于协程无界 `Channel` 的意图队列。冷启动或多线程高频触发外部唤起时，底层协程会自动缓冲并按序消费路由，绝不丢失任何一次跳转意图。
 9. **高级导航表现**：内置单例模式控制、多返回栈（无缝衔接底层 Tab 栏）、自定义动画过渡、Compose 共享元素动画 (Shared Element) 及 404 全局降级。
@@ -36,7 +36,7 @@
     * **RouterHost**: 负责管理页面的导航栈（返回栈、多Tab栈等），并结合 `@Transition` 提供的动画元数据实现 Compose 动画切换与精细化过渡。
     * **Service Registry & RouterContext**: 存储并管理由 KSP 自动注入的跨模块接口与实现类的映射关系。全局通过 `RouterContext` 提供上下文环境管理，无论是服务获取还是事件分发都在此安全运转。
     * **Lifecycle & Scopes**: 借助 Compose 的 `SaveableStateHolder` 实现每个页面的状态保持，并为每个页面维护独立的生命周期与**协程作用域 (CoroutineScope)**。挂起函数与底层协程生命周期同生共死。
-4. **UI 表现层 (Compose)**: 开发者在业务界面的 UI 中，通过访问全局的 `Navigator` 对象发起页面跳转（并可通过**协程挂起**无缝等待返回值）；通过 `rememberService<T>()` 获取跨模块通信接口；并通过 `tianquViewModel()` 挂载受页面生命周期严格管控的 ViewModel，当页面从路由栈移除时，对应的协程作用域和 ViewModel 会自动释放。
+4. **UI 表现层 (Compose)**: 开发者在业务界面的 UI 中，通过访问全局的 `Navigator` 对象发起页面跳转（并可通过**协程挂起**无缝等待返回值）；通过 `rememberService<T>()` 获取跨模块通信接口；并通过 `tianquViewModelInject()` 挂载受页面生命周期严格管控并自动注入的 ViewModel，当页面从路由栈移除时，对应的协程作用域和 ViewModel 会自动释放。
 
 ---
 
@@ -687,7 +687,7 @@ fun fetchUserData() {
 
 ## 🧬 七、ViewModel 与页面生命周期深度绑定
 
-原生的 `viewModel()` 在纯 Compose Multiplatform 项目中往往缺乏路由弹栈感知能力。TianQu 提供了与**单次页面路由同生共死**的专有 ViewModel：`tianquViewModel<T>()`。
+原生的 `viewModel()` 在纯 Compose Multiplatform 项目中往往缺乏路由弹栈感知能力。TianQu 提供了与**单次页面路由同生共死**的专有 ViewModel，并支持三种不同的获取方式，满足各种复杂场景的需求。
 
 ### 1. 声明标准的 ViewModel
 ```kotlin
@@ -707,26 +707,88 @@ class CounterViewModel : ViewModel() {
 }
 ```
 
-### 2. 在路由页获取并绑定
+### 2. 获取 ViewModel 的三种方式
+
+在路由页面中，您可以通过以下三种方式获取与当前页面生命周期绑定的 ViewModel：
+
+#### 方式一：反射无参构造获取 (`tianquViewModel<T>()`)
+
+最简单直接的方式，适用于 ViewModel 只有无参构造函数的情况。在 JVM/Android 平台上通过反射实例化。
+
 ```kotlin
 import shijing.tianqu.runtime.tianquViewModel
 
 @Router(path = "/demo_viewmodel")
 @Composable
 fun DemoViewModelScreen() {
-    val navigator = LocalNavigator.current
-    
-    // 获取该路由页面专属的 ViewModel 实例。
-    // 如果此页面重复进栈，每个栈实例将获得互相独立的 ViewModel！
+    // 自动通过反射调用无参构造函数创建 ViewModel
     val viewModel = tianquViewModel<CounterViewModel>()
-    val count by viewModel.count.collectAsState()
-    
-    Button(onClick = { navigator.popBackStack() }) {
-        Text("返回上一页（并销毁 ViewModel）")
-    }
+    // ...
 }
 ```
-**当点击返回，当前页面被 `popBackStack` 移出栈时，框架将主动触发 `onCleared()`，杜绝任何内存泄漏。**
+* **优点**：使用极其简单，无需额外配置，开箱即用。
+* **缺点**：依赖反射机制，**在 iOS 等 Kotlin/Native 平台上不支持无参反射实例化，会导致 Crash**；不支持带参数的构造函数。
+
+#### 方式二：自定义 Factory 获取 (`tianquViewModel<T>(factory)`)
+
+适用于 ViewModel 需要传递参数（如 Repository、UseCase）或在 iOS 平台上运行的情况。
+
+```kotlin
+import shijing.tianqu.runtime.tianquViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import kotlin.reflect.KClass
+
+// 自定义 Factory
+class CounterViewModelFactory : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: KClass<T>, extras: CreationExtras): T {
+        return CounterViewModel() as T // 如果有参数，可以在这里传入
+    }
+}
+
+@Router(path = "/demo_viewmodel")
+@Composable
+fun DemoViewModelScreen() {
+    // 传入自定义 Factory 进行实例化
+    val viewModel = tianquViewModel<CounterViewModel>(factory = CounterViewModelFactory())
+    // ...
+}
+```
+* **优点**：灵活性最高，支持带参数的构造函数；**完全兼容所有平台（包括 iOS）**。
+* **缺点**：每次使用都需要手动编写和传入 Factory，样板代码较多，略显繁琐。
+
+#### 方式三：基于 KSP 的全自动依赖注入 (`tianQuViewModelInject<T>()`) 【⭐ 强烈推荐】
+
+结合了前两者的优点，通过 `@InjectViewModel` 注解在编译期生成工厂代码，实现无反射、跨平台的自动注入。
+
+**步骤 A：在 ViewModel 上添加注解**
+```kotlin
+import shijing.tianqu.router.InjectViewModel
+
+@InjectViewModel // 🌟 标记此 ViewModel 需要生成注入工厂
+class CounterViewModel : ViewModel() {
+    // ...
+}
+```
+
+**步骤 B：在页面中一键获取**
+```kotlin
+import shijing.tianqu.runtime.tianQuViewModelInject
+
+@Router(path = "/demo_viewmodel")
+@Composable
+fun DemoViewModelScreen() {
+    // 底层自动从 ServiceLocator 获取生成的工厂并实例化，无需反射！
+    val viewModel = tianQuViewModelInject<CounterViewModel>()
+    // ...
+}
+```
+* **优点**：**无反射（性能极佳）、完全跨平台（完美支持 iOS）、无样板代码（使用极其简单）**。
+* **缺点**：目前生成的默认工厂仅支持无参构造函数（若需带参构造，请继续使用方式二）。
+
+---
+
+**💡 内存泄漏终结者**：无论您使用哪种方式获取，**当点击返回，当前页面被 `popBackStack` 移出栈时，框架将主动触发 ViewModel 的 `onCleared()`，杜绝任何内存泄漏。**
 
 ---
 

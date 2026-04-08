@@ -29,4 +29,9 @@ interface ServiceResolver {
      * 异步挂起获取指定接口的服务实现实例。
      */
     suspend fun <T : Any> awaitService(clazz: KClass<T>): T? = getServiceAsync(clazz).await()
+
+    /**
+     * 获取指定类的工厂方法（主要用于 ViewModel 注入）。
+     */
+    fun <T : Any> getServiceFactory(clazz: KClass<T>): (() -> T)?
 }

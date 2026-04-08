@@ -13,10 +13,12 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import shijing.tianqu.router.InjectViewModel
 import shijing.tianqu.router.Router
 import shijing.tianqu.runtime.LocalNavigator
-import shijing.tianqu.runtime.tianquViewModel
+import shijing.tianqu.runtime.tianQuViewModelInject
 
+@InjectViewModel
 class CounterViewModel : ViewModel() {
     private val _count = MutableStateFlow(0)
     val count: StateFlow<Int> = _count.asStateFlow()
@@ -42,7 +44,7 @@ fun DemoViewModelScreen() {
     
     // 使用 tianquViewModel() 获取与当前路由页面生命周期绑定的 ViewModel
     // 当这个页面被弹栈(pop)时，CounterViewModel 的 onCleared() 将会被自动调用！
-    val viewModel = tianquViewModel<CounterViewModel>()
+    val viewModel = tianQuViewModelInject<CounterViewModel>()
     
     val count by viewModel.count.collectAsState()
 

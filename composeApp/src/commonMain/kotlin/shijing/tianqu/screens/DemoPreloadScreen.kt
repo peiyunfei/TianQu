@@ -22,7 +22,7 @@ import androidx.compose.runtime.setValue
 import shijing.tianqu.runtime.LocalNavigator
 import shijing.tianqu.runtime.RoutePreloader
 import shijing.tianqu.runtime.rememberPreloadData
-import shijing.tianqu.runtime.tianquViewModel
+import shijing.tianqu.runtime.tianQuViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -87,7 +87,7 @@ fun DemoPreloadScreen(context: RouterContext) {
     val navigator = LocalNavigator.current
     
     // 1. 获取绑定到当前路由节点生命周期的 ViewModel
-    val viewModel = tianquViewModel<DemoPreloadViewModel>()
+    val viewModel = tianQuViewModel { DemoPreloadViewModel() }
     
     // 2. 从框架中获取预加载的数据状态
     val preloadedResult by rememberPreloadData<UserDetailData>()

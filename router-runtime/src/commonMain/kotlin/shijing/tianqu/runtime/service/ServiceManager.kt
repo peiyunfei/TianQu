@@ -61,4 +61,13 @@ object ServiceManager {
     suspend fun <T : Any> awaitService(clazz: KClass<T>): T? {
         return resolver.awaitService(clazz)
     }
+
+    /**
+     * 获取指定 ViewModel 的工厂。
+     */
+    fun <T : Any> getViewModelFactory(clazz: KClass<T>): (() -> T)? {
+        // 由于所有的 @Service 和 @InjectViewModel 都通过相同的机制收集到 registryProviders 中，
+        // 这里可以直接从 resolver 中获取构造它的无参工厂
+        return resolver.getServiceFactory(clazz)
+    }
 }

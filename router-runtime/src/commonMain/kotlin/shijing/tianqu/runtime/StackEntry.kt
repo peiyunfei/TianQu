@@ -56,6 +56,9 @@ data class StackEntry(
         // 这会遍历此页面所有的 ViewModel 实例，并触发它们的 onCleared() 方法，让业务层有机会释放网络、数据库连接。
         _viewModelStore?.clear()
 
+        // 修复：如果用户在数据预加载完成前极速退出页面，应该立即取消后台请求，避免协程泄漏、网络资源浪费。
+        preloaderDeferred?.cancel()
+
         // 依次执行自定义回调，并清空列表。
         disposeCallbacks.forEach { it() }
         disposeCallbacks.clear()

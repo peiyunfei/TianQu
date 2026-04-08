@@ -8,6 +8,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.writeTo
+import shijing.tianqu.router.InjectViewModel
 import shijing.tianqu.router.aggregation.ModuleServiceRegistry
 
 /**
@@ -30,16 +31,32 @@ class ServiceRegistryGeneratorStrategy(private val moduleName: String = "Default
             .indent()
 
         classes.forEachIndexed { index, ksClass ->
-            // 获取该类实现的第一个接口作为注册的 Key
-            val superType = ksClass.superTypes.firstOrNull()?.resolve()
-            val superDeclaration = superType?.declaration as? KSClassDeclaration
+            // 检查是否带有 @InjectViewModel 注解
+            val isViewModel = ksClass.annotations.any {
+                it.shortName.asString() == (InjectViewModel::class.simpleName ?: "")
+            }
             
-            if (superDeclaration != null && superDeclaration.classKind == ClassKind.INTERFACE) {
-                val interfaceName = ClassName(
-                    superDeclaration.packageName.asString(),
-                    superDeclaration.simpleName.asString()
+            val keyClassName: ClassName? = if (isViewModel) {
+                // 如果是 ViewModel，直接使用自身的 Class 作为 Key
+                ClassName(
+                    ksClass.packageName.asString(),
+                    ksClass.simpleName.asString()
                 )
-                
+            } else {
+                // 如果是 Service，获取该类实现的第一个接口作为注册的 Key
+                val superType = ksClass.superTypes.firstOrNull()?.resolve()
+                val superDeclaration = superType?.declaration as? KSClassDeclaration
+                if (superDeclaration != null && superDeclaration.classKind == ClassKind.INTERFACE) {
+                    ClassName(
+                        superDeclaration.packageName.asString(),
+                        superDeclaration.simpleName.asString()
+                    )
+                } else {
+                    null
+                }
+            }
+
+            if (keyClassName != null) {
                 val implClassName = ClassName(
                     ksClass.packageName.asString(),
                     ksClass.simpleName.asString()
@@ -49,7 +66,7 @@ class ServiceRegistryGeneratorStrategy(private val moduleName: String = "Default
                 // 告别反射，生成 Lambda 函数 `{ ImplClass() }` 以供运行时无反射懒加载调用
                 initBlock.add(
                     "%T::class to { %T() }%L",
-                    interfaceName,
+                    keyClassName,
                     implClassName,
                     comma
                 )

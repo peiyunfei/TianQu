@@ -6,6 +6,7 @@ import com.google.devtools.ksp.validate
 import shijing.tianqu.router.Router
 import shijing.tianqu.router.Service
 import shijing.tianqu.router.Transition
+import shijing.tianqu.router.InjectViewModel
 
 /**
  * 路由符号处理器。
@@ -37,10 +38,15 @@ class RouterProcessor(
         // 将无效符号加入 deferredSymbols，推迟到下一轮
         deferredSymbols.addAll(functionDeclarations.filterNot { it.validate() })
 
-        // 2. 获取所有带 @Service 注解的符号
+        // 2. 获取所有带 @Service 和 @InjectViewModel 注解的符号
         val serviceSymbols = resolver.getSymbolsWithAnnotation(Service::class.qualifiedName ?: "")
-        // 过滤出类声明（因为 @Service 标记在实现类上）
-        val classDeclarations = serviceSymbols.filterIsInstance<KSClassDeclaration>()
+        val viewModelSymbols = resolver.getSymbolsWithAnnotation(InjectViewModel::class.qualifiedName ?: "")
+        
+        // 合并 Service 和 InjectViewModel 的符号，因为它们都使用相同的注册表生成策略
+        val combinedServiceSymbols = serviceSymbols + viewModelSymbols
+        
+        // 过滤出类声明（因为 @Service 和 @InjectViewModel 标记在实现类上）
+        val classDeclarations = combinedServiceSymbols.filterIsInstance<KSClassDeclaration>().distinct()
         // 验证符号是否有效（类型是否已完全解析）
         val validClasses = classDeclarations.filter { it.validate() }.toList()
         // 将无效符号加入 deferredSymbols，推迟到下一轮

@@ -65,6 +65,11 @@ class DefaultServiceResolver : ServiceResolver {
         return null
     }
 
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Any> getServiceFactory(clazz: KClass<T>): (() -> T)? {
+        return providers[clazz] as? (() -> T)
+    }
+
     override fun <T : Any> getServiceAsync(clazz: KClass<T>): AsyncResult<T?> {
         val result = DeferredAsyncResult<T?>()
         
