@@ -1,5 +1,6 @@
 package shijing.tianqu.runtime
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -14,6 +15,9 @@ import kotlinx.coroutines.launch
 import shijing.tianqu.runtime.async.AsyncResult
 import shijing.tianqu.runtime.async.DeferredAsyncResult
 import shijing.tianqu.runtime.handler.RouterHandler
+import shijing.tianqu.runtime.strategy.ClearAndPushStrategy
+import shijing.tianqu.runtime.strategy.PushStrategy
+import shijing.tianqu.runtime.strategy.ReplaceStrategy
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 
@@ -33,7 +37,9 @@ class Navigator(
     private val routerHandler: RouterHandler? = null,
     val parent: Navigator? = null,
     val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
-    preloaders: Map<String, RoutePreloader<*>> = emptyMap()
+    preloaders: Map<String, RoutePreloader<*>> = emptyMap(),
+    // 整个回退栈中最多的页面数量，超过则移除栈底页面（0 或负数表示不限制）
+    val maxStackSize: Int = -1
 ) : AbstractCoroutineContextElement(Navigator) {
 
     /**
@@ -133,6 +139,15 @@ class Navigator(
         _routeEvents.emit(event)
     }
 
+    // 供策略类内部调用
+    internal suspend fun emitEventForStrategy(event: RouterEvent) {
+        emitEvent(event)
+    }
+
+    internal fun setLastActionForStrategy(action: NavigationAction) {
+        lastAction = action
+    }
+
     /**
      * 路由节点匹配缓存，避免同一个路径重复执行正则匹配
      * Key: 纯路径 (例如 "/user/10086")
@@ -190,12 +205,12 @@ class Navigator(
     ): Boolean {
         var (matchedNode, context) = prepareContext(url, extra)
 
-        // 1. 先执行全局路由守卫 (因为拦截器内部可能涉及动态路由下载与注册，注册后就找得到了)
+        // 先执行全局路由守卫 (因为拦截器内部可能涉及动态路由下载与注册，注册后就找得到了)
         if (!GuardProcessor.processGuards(context, guards)) {
             return false
         }
         
-        // 2. 如果拦截器执行完后，当初没找到节点，现在再找一次 (应对动态加载特性的场景)
+        // 如果拦截器执行完后，当初没找到节点，现在再找一次 (应对动态加载特性的场景)
         if (matchedNode == null) {
             val (newNode, newContext) = prepareContext(url, extra)
             matchedNode = newNode
@@ -253,24 +268,28 @@ class Navigator(
             }
         }
 
-        val entry = StackEntry(matchedNode, context, result, preloaderDeferred = preloaderDeferred)
+        val entry = StackEntry(matchedNode, context, false, result, preloaderDeferred = preloaderDeferred)
 
-        when (action) {
-            NavigationAction.PUSH -> backStack.add(entry)
-            NavigationAction.REPLACE -> {
-                if (backStack.isNotEmpty()) {
-                    val removed = backStack.removeAt(backStack.lastIndex)
-                    removed.dispose()
-                }
-                backStack.add(entry)
-            }
-            NavigationAction.CLEAR_AND_PUSH -> {
-                backStack.forEach { it.dispose() }
-                backStack.clear()
-                backStack.add(entry)
-            }
-            else -> {}
+        val strategy = when (action) {
+            NavigationAction.PUSH -> PushStrategy()
+            NavigationAction.REPLACE -> ReplaceStrategy()
+            NavigationAction.CLEAR_AND_PUSH -> ClearAndPushStrategy()
+            else -> null
         }
+
+        if (strategy != null) {
+            val handled = strategy.execute(this, entry, action, url)
+            if (handled) return true
+        }
+        // 处理整个回退栈的 maxStackSize
+        if (this.maxStackSize > 0 && backStack.size > this.maxStackSize) {
+            // 移除栈底（最旧的）页面，通常是索引为 0 或 1 的页面
+            // 索引 0 通常是根页面，为了避免根页面被移除导致应用退出，可以选择移除索引 1
+            val removed = backStack.removeAt(1)
+            removed.result?.complete(null)
+            removed.dispose()
+        }
+
         // 发送导航成功事件
         coroutineScope.launch {
             emitEvent(RouterEvent.Navigated(action, url))

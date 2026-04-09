@@ -21,7 +21,7 @@
 6. **生命周期与 ViewModel 绑定**：内置专属页面作用域，提供 `tianquViewModel<T>()`。支持跨平台无反射的 `@InjectViewModel` 自动依赖注入 `tianQuViewModelInject<T>()`，当页面出栈时，不仅自动销毁 ViewModel，还会**自动取消其绑定的所有协程任务**，彻底告别内存泄漏与空指针。
 7. **并发预加载引擎**：内置基于 `CompletableDeferred` 的非阻塞预加载器 (`RoutePreloader`)。在转场动画播放的同时，后台协程高并发加载目标页数据，实现“瞬开”体验。
 8. **离线 DeepLink 意图缓存**：内置基于协程无界 `Channel` 的意图队列。冷启动或多线程高频触发外部唤起时，底层协程会自动缓冲并按序消费路由，绝不丢失任何一次跳转意图。
-9. **高级导航表现**：内置单例模式控制、多返回栈（无缝衔接底层 Tab 栏）、自定义动画过渡、Compose 共享元素动画 (Shared Element) 及 404 全局降级。
+9. **高级导航表现**：内置单例模式控制 (`SINGLE_TOP`, `SINGLE_TASK`) 且支持**零重组代价**的参数复用更新、多返回栈（无缝衔接底层 Tab 栏）、自定义动画过渡、Compose 共享元素动画 (Shared Element) 及 404 全局降级。
 
 ---
 
@@ -288,7 +288,33 @@ fun App() {
 
 > **💡 多层嵌套拦截提示**：由于 Compose 的 `BackHandler` 遵循“就近拦截（子优先）”原则。如果您在某个深层子页面（例如填写表单页）也调用了自定义的 `BackHandler`，它会优先消费返回事件，完美覆盖全局的这个默认退栈逻辑，不会产生冲突！
 
-### 4. 自定义页面切换动画
+### 4. 路由启动模式 (LaunchMode)：栈顶复用与栈内复用
+天衢 路由全面支持了类似 Android Activity 的高级启动模式 (`LaunchMode`)，并且由于采用纯 Compose 状态驱动，复用页面时**只有在参数发生实质性变化时才会触发重组**，实现了真正的“零开销复用”。
+
+**如何使用：**
+在 `@Router` 注解中指定 `launchMode` 即可。目前支持三种模式：
+- `LaunchMode.STANDARD` (默认)：每次跳转都创建新页面并入栈。
+- `LaunchMode.SINGLE_TOP`：栈顶复用。如果当前栈顶已经是该页面，则复用栈顶页面，不创建新实例，同时将新的参数传递给旧页面。
+- `LaunchMode.SINGLE_TASK`：栈内复用。如果导航栈中已经存在该页面，则将其上的所有页面弹出栈 (Pop)，使该页面重新回到栈顶并复用，同时传递新参数。
+
+```kotlin
+import shijing.tianqu.router.LaunchMode
+import shijing.tianqu.router.Router
+
+// 示例：设置栈内复用模式。
+// 假设栈为 [Home, Task, Detail]，此时再跳到 /task，Detail 会被出栈，回到 [Home, Task]。
+@Router(path = "/task", launchMode = LaunchMode.SINGLE_TASK)
+@Composable
+fun SingleTaskScreen(context: RouterContext) {
+    // context 会自动更新为最新传递进来的参数，并按需触发 Compose 重组。
+    // 如果传递的新参数与旧参数完全相同（实质内容一样），底层引擎会拦截赋值，不会引发任何 UI 重组！
+    Text("Task Page: ${context.queryParams["id"]}")
+}
+```
+
+> **💡 最佳实践**：得益于 Compose 的 `SaveableStateHolder`，在 `SINGLE_TASK` 触发上层页面退栈而使复用页面重新展示时，原页面的滚动位置、输入框状态等均会**原样保留且无缝衔接动画**，完美还原 Android 的 `onNewIntent` 体验！
+
+### 5. 自定义页面切换动画
 天衢 路由内置了常见的转场动画（如 `Fade`, `Slide`, `Scale`, `None`），默认使用的是`Slide`，这是安卓上经典的页面切换动画。如果您需要极其炫酷的自定义动画，可以直接使用 `@Transition` 注解和 `BaseTransitionStrategy` 轻松实现，且完全支持 Compose 官方的动画 API！
 
 **实现步骤：**

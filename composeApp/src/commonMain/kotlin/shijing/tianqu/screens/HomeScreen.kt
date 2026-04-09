@@ -28,13 +28,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.rememberCoroutineScope
+import shijing.tianqu.router.LaunchMode
 
 // 定义一个用于演示对象传递的数据类
 data class UserProfile(val name: String, val age: Int, val isVip: Boolean)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Router(
-    path = "/home"
+    path = "/home",
+    launchMode = LaunchMode.SINGLE_TOP
 )
 @Composable
 fun HomeScreen(context: RouterContext) {
@@ -96,7 +98,28 @@ fun HomeScreen(context: RouterContext) {
                     Text("+1")
                 }
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 测试 SingleTop 逻辑
+            Button(
+                onClick = {
+                    navigator.navigateTo("/test_single_top?param=${kotlin.random.Random.nextInt(100)}")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+            ) {
+                Text("进入 SingleTop 测试页")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = {
+                    navigator.navigateTo("/test_single_task?param=${kotlin.random.Random.nextInt(100)}")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Text("进入 SingleTask 测试页")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
 
             Button(onClick = {
                 // 演示传递复杂对象参数：

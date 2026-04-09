@@ -14,4 +14,17 @@ data class RouterContext(
     val pathParams: Map<String, String> = emptyMap(),
     val queryParams: Map<String, List<String>> = emptyMap(),
     val extra: Any? = null
-)
+) {
+    /**
+     * 判断两个上下文的实际参数内容是否相同。
+     * 在 SINGLE_TOP 和 SINGLE_TASK 复用时，用于避免因原始 URL 字符串差异（如参数顺序不同）
+     * 导致的无效重组。
+     */
+    fun isSameParameters(other: RouterContext): Boolean {
+        if (this === other) return true
+        if (this.pathParams != other.pathParams) return false
+        if (this.queryParams != other.queryParams) return false
+        if (this.extra != other.extra) return false
+        return true
+    }
+}

@@ -63,18 +63,20 @@ fun rememberNavigator(
     guards: List<RouterGuard> = emptyList(),
     routerHandler: RouterHandler? = null,
     parent: Navigator? = null,
-    preloaders: Map<String, RoutePreloader<*>> = emptyMap()
+    preloaders: Map<String, RoutePreloader<*>> = emptyMap(),
+    maxStackSize: Int = -1 // -1表示不限制
 ): Navigator {
     val coroutineScope = rememberCoroutineScope()
     
-    val navigator = remember(routes, guards, routerHandler, parent, coroutineScope, preloaders) {
+    val navigator = remember(routes, guards, routerHandler, parent, coroutineScope, preloaders, maxStackSize) {
         Navigator(
             initialRoutes = routes,
             guards = guards,
             routerHandler = routerHandler,
             parent = parent,
             coroutineScope = coroutineScope,
-            preloaders = preloaders
+            preloaders = preloaders,
+            maxStackSize = maxStackSize
         )
     }
     

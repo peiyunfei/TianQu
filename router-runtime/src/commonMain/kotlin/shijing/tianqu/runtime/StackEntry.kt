@@ -1,5 +1,8 @@
 package shijing.tianqu.runtime
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import shijing.tianqu.router.RouterContext
 import shijing.tianqu.runtime.async.DeferredAsyncResult
 
@@ -17,7 +20,12 @@ data class StackEntry(
     val node: RouterNode,
 
     // 用户跳转时携带的动态数据（例如 /user/123 解析出来的 123 参数，或者额外传递的 extra 对象）
-    val context: RouterContext,
+    // 为了支持 SingleTop/SingleTask 传递新参数时能触发 Compose 重组，将 context 包装为状态
+    @Suppress("CanBeParameter") // 消除 KProperty 不允许在 data class 主构造器中的警告，但实际上 data class 要求全 val/var
+    var _context: RouterContext,
+
+    // 记录是否是因 SingleTop/SingleTask 触发的更新
+    var isNewIntent: Boolean = false,
 
     // 用于处理带有返回值的页面跳转（类似 startActivityForResult）
     val result: DeferredAsyncResult<Any?>? = null,
@@ -29,6 +37,9 @@ data class StackEntry(
     val preloaderDeferred: Deferred<Any?>? = null
 
 ) : ViewModelStoreOwner {
+
+    // 暴露可变的并且支持 Compose 监听的状态属性
+    var context: RouterContext by mutableStateOf(_context)
 
     // 延迟初始化 _viewModelStore。ViewModelStore 是官方提供的容器，本质上是一个 HashMap<String, ViewModel>。
     private var _viewModelStore: ViewModelStore? = null

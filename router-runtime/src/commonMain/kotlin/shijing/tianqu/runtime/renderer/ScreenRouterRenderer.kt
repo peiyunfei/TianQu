@@ -120,7 +120,13 @@ class ScreenRouterRenderer : RouterRenderer {
                                     LocalStackEntry provides entry
                                 ) {
                                     // 真正执行由开发者编写的 Compose 页面代码。
+                                    // 每次重组时，如果 isNewIntent 为 true，说明参数更新了，这里会传入最新的 context
                                     entry.node.composable(entry.context)
+                                    
+                                    // 消费掉 isNewIntent 标志，避免重复触发（可选，取决于具体业务是否需要严格的消费机制）
+                                    // 但由于 Compose 是声明式的，只要 context 变了，composable 就会用新的 context 重新执行
+                                    // 所以这里其实不需要手动重置 isNewIntent，只要 context 是 mutableState 或者在重组范围内即可
+                                    // 为了确保 context 变化能触发重组，StackEntry 中的 context 应该被包裹在 mutableStateOf 中，或者在 Renderer 中被读取
                                 }
                             }
                         }

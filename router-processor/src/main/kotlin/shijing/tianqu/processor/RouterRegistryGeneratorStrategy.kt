@@ -62,6 +62,16 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
             // 处理形如 "RouteType.SCREEN" 的情况
             val cleanTypeName = typeName.substringAfterLast(".")
 
+            // 获取启动模式 (默认值为 STANDARD)
+            val launchModeArg = annotation.arguments.find { it.name?.asString() == "launchMode" }
+            val launchModeValue = launchModeArg?.value
+            val launchModeName = if (launchModeValue is com.google.devtools.ksp.symbol.KSType) {
+                launchModeValue.declaration.simpleName.asString()
+            } else {
+                launchModeValue?.toString() ?: "STANDARD"
+            }
+            val cleanLaunchModeName = launchModeName.substringAfterLast(".")
+
             // 获取函数名和所在的包
             val funcName = func.simpleName.asString()
             val funcPackage = func.packageName.asString()
@@ -92,12 +102,14 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
                 "    regexPattern = %S,\n" +
                 "    transition = $transitionInstantiateStr,\n" +
                 "    type = shijing.tianqu.router.RouteType.%L,\n" +
+                "    launchMode = shijing.tianqu.router.LaunchMode.%L,\n" +
                 "    composable = $composableCall\n" +
                 ")%L",
                 pathValue,
                 "^$regexPattern\$", // 添加首尾匹配
                 transitionName,
                 cleanTypeName,
+                cleanLaunchModeName,
                 funcClassName,
                 comma
             )

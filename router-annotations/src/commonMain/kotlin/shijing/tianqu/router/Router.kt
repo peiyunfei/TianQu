@@ -10,6 +10,15 @@ enum class RouteType {
 }
 
 /**
+ * 路由启动模式
+ */
+enum class LaunchMode {
+    STANDARD,       // 标准模式：每次都创建新实例
+    SINGLE_TOP,     // 栈顶复用：如果栈顶已经是该页面，则不创建新实例
+    SINGLE_TASK     // 栈内复用：如果栈内存在该页面，则将其上面的所有页面出栈
+}
+
+/**
  * 标记一个 Composable 函数为路由目的地
  *
  * @param path 路由路径，支持参数化，例如 "/home", "/user/{id}"
@@ -23,5 +32,6 @@ enum class RouteType {
 annotation class Router(
     val path: String,
     val transition: String = "Slide",
-    val type: RouteType = RouteType.SCREEN
+    val type: RouteType = RouteType.SCREEN,
+    val launchMode: LaunchMode = LaunchMode.STANDARD,
 )
