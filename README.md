@@ -48,9 +48,9 @@
 
 ```toml
 [versions]
-tianqu-router-annotations = "1.0.3" # 替换为最新版本号
-tianqu-router-processor = "1.0.3"
-tianqu-router-runtime = "1.0.3"
+tianqu-router-annotations = "1.0.4" # 替换为最新版本号
+tianqu-router-processor = "1.0.4"
+tianqu-router-runtime = "1.0.4"
 ksp = "2.1.10-1.0.31" # 请务必与您项目的 Kotlin 版本一致
 
 [libraries]
@@ -295,7 +295,7 @@ fun App() {
 在 `@Router` 注解中指定 `launchMode` 即可。目前支持三种模式：
 - `LaunchMode.STANDARD` (默认)：每次跳转都创建新页面并入栈。
 - `LaunchMode.SINGLE_TOP`：栈顶复用。如果当前栈顶已经是该页面，则复用栈顶页面，不创建新实例，同时将新的参数传递给旧页面。
-- `LaunchMode.SINGLE_TASK`：栈内复用。如果导航栈中已经存在该页面，则将其上的所有页面弹出栈 (Pop)，使该页面重新回到栈顶并复用，同时传递新参数。
+- `LaunchMode.SINGLE_TASK`：栈内复用。如果导航栈中已经存在该页面，则将其上的所有页面弹出栈，使该页面重新回到栈顶并复用，同时传递新参数。
 
 ```kotlin
 import shijing.tianqu.router.LaunchMode
@@ -713,7 +713,7 @@ fun fetchUserData() {
 
 ## 🧬 七、ViewModel 与页面生命周期深度绑定
 
-原生的 `viewModel()` 在纯 Compose Multiplatform 项目中往往缺乏路由弹栈感知能力。TianQu 提供了与**单次页面路由同生共死**的专有 ViewModel，并支持三种不同的获取方式，满足各种复杂场景的需求。
+原生的 `viewModel()` 在纯 Compose Multiplatform 项目中往往缺乏路由弹栈感知能力。天衢 提供了与**单次页面路由同生共死**的专有 ViewModel，并支持三种不同的获取方式，满足各种复杂场景的需求。
 
 ### 1. 声明标准的 ViewModel
 ```kotlin
@@ -822,13 +822,13 @@ fun DemoViewModelScreen() {
 
 在大型项目中，为了减小包体积或加快初始启动速度，某些业务模块可以设计为**动态下载与按需加载**。在传统路由中，这往往需要复杂的异步回调与占位页面。
 
-而在 天衢 路由中，得益于底层的协程 `suspend` 架构与强大的全局守卫 (`RouterGuard`)，您可以像写同步代码一样轻松实现**带有等待 UI 的动态模块加载**。
+而在 天衢 路由中，得益于底层的协程架构与强大的全局守卫 (`RouterGuard`)，您可以像写同步代码一样轻松实现**带有等待 UI 的动态模块加载**。
 
 **核心原理：**
 1. 业务层调用挂起函数 `navigator.push("/dynamic_route")`，并在协程外层控制 "Loading 转圈" UI 状态。
 2. 路由框架进行匹配，发现目标路由不存在。
 3. 全局 `RouterGuard` 拦截到请求，判断该 URL 属于某个未加载的模块。
-4. **守卫在内部使用 `suspend` 挂起执行下载逻辑（如下载 js bundle、加载 dex、或从服务器拉取配置）。**
+4. **守卫在内部使用挂起执行下载逻辑（如下载 js bundle、加载 dex、或从服务器拉取配置）。**
 5. 下载完成后，守卫动态注册新模块的路由表：`navigator.registerDynamicRoutes(...)`。
 6. 守卫返回 `true`，拦截器放行。
 7. 框架自动完成向目标页面的跳转。
@@ -904,7 +904,7 @@ fun HomeScreen() {
 ## 🎨 九、其他极客能力全景公开
 
 ### 1. 多返回栈嵌套管理与 Tab 状态持久化
-App 主页往往包含底部的多个 Tab。TianQu 底层深度打通了 `SaveableStateHolder`，完美解决“切换 Tab 重新渲染导致输入内容与滚动条丢失”的问题。这是一种原生的“单宿主+多挂载点”轻量实现：
+App 主页往往包含底部的多个 Tab。天衢 底层深度打通了 `SaveableStateHolder`，完美解决“切换 Tab 重新渲染导致输入内容与滚动条丢失”的问题。这是一种原生的“单宿主+多挂载点”轻量实现：
 
 ```kotlin
 @Router(path = "/main_tab")
@@ -960,7 +960,7 @@ Image(
 ```
 
 ### 3. 全局路由 404 降级拦截处理
-意外跳转到了未注册的页面怎么办？TianQu 不会发生崩溃，而是触发一个 `NotFound` 事件！您只需在 `App.kt` 初始化 `Navigator` 时监听流，即可实现自由调度或重定向。
+意外跳转到了未注册的页面怎么办？天衢 不会发生崩溃，而是触发一个 `NotFound` 事件！您只需在 `App.kt` 初始化 `Navigator` 时监听流，即可实现自由调度或重定向。
 
 ```kotlin
 val navigator = rememberNavigator(GlobalRouteAggregator.routers, "/home")

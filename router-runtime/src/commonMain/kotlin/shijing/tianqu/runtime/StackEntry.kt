@@ -21,7 +21,6 @@ data class StackEntry(
 
     // 用户跳转时携带的动态数据（例如 /user/123 解析出来的 123 参数，或者额外传递的 extra 对象）
     // 为了支持 SingleTop/SingleTask 传递新参数时能触发 Compose 重组，将 context 包装为状态
-    @Suppress("CanBeParameter") // 消除 KProperty 不允许在 data class 主构造器中的警告，但实际上 data class 要求全 val/var
     var _context: RouterContext,
 
     // 记录是否是因 SingleTop/SingleTask 触发的更新

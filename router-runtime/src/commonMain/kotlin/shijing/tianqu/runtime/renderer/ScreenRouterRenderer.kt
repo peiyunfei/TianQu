@@ -56,7 +56,9 @@ class ScreenRouterRenderer : RouterRenderer {
                     AnimatedContent(
                         targetState = currentScreenEntry, // 监听栈顶页面的变化
                         modifier = Modifier.fillMaxSize(), // 占满全屏
-
+                        // 用id明确指定一个页面，Compose的差异算法会使用id来比对。
+                        // 不明确指定key，Compose的差异算法可能会比对出错，导致出现意外的重组
+                        contentKey = { it.id },
                         // transitionSpec：极其关键的一步！动态决定使用什么动画来切换。
                         transitionSpec = {
                             // 判断当前导航操作是不是“出栈”（返回上一页）操作。
