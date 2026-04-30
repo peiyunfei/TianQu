@@ -85,6 +85,12 @@ class DefaultServiceResolver : ServiceResolver {
                         val provider = providers[clazz]
                         if (provider != null) {
                             // 启动一个新的后台异步任务(async)去实例化对象
+                            // 问题：KMP Common 代码中全局异步池使用的是 Dispatchers.Default（针对 CPU 密集型任务优化）。
+                            //      如果服务方在构造函数 (provider()) 中执行了耗时的 IO 阻塞操作（如读取文件、初始化数据库等），
+                            //      会造成这部分有限的线程被卡住，引发全局协程的线程饥饿（Thread Starvation）。
+                            // 方案：目前限于 KMP 无法跨平台直接引用 Dispatchers.IO，在此强制添加约定警告：
+                            //      业务方的 @Service 构造函数必须严格避免执行同步 IO 操作。
+                            // 长期架构改进方向：升级 KSP 处理逻辑，使 provider 支持生成 suspend () -> Any 函数。
                             scope.async {
                                 val instance = provider()
                                 syncInstances[clazz] = instance

@@ -1,8 +1,5 @@
 package shijing.tianqu.runtime
 
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
-
 /**
  * URL 解析器，负责处理深层链接、查询参数和路径参数的提取（策略/工具类）
  */

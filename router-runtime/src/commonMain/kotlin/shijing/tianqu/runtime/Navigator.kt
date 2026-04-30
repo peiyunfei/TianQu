@@ -1,10 +1,10 @@
 package shijing.tianqu.runtime
 
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.CancellationException
 import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.RouterGuard
 import kotlinx.coroutines.CoroutineScope
@@ -181,8 +181,11 @@ class Navigator(
         matchedNodeCache[path]?.let { return it }
 
         // 2. 缓存未命中，执行正则匹配
+        //    使用 node.compiledRegex 而不是 Regex(node.regexPattern)。
+        //    区别在于：Regex(...) 是现场构造，每次遍历每个节点都会 new 一个新对象，用完即丢；
+        //    而 compiledRegex 是懒加载缓存在节点上的，每个节点整个生命周期内只创建一次，后续直接复用。
         val matched = routeRegistry.find { node ->
-            Regex(node.regexPattern).matches(path)
+            node.compiledRegex.matches(path)
         }
 
         // 3. 匹配成功则加入缓存
@@ -262,6 +265,10 @@ class Navigator(
                 try {
                     preloader.preload(context)
                 } catch (e: Exception) {
+                    // 问题：之前直接用 catch (e: Exception) 会把协程的 CancellationException 吞掉，导致
+                    //      如果用户在预加载完成前极速退出页面，后台任务无法被真正中断，造成流量浪费和潜在崩溃。
+                    // 方案：显式判断并重新抛出 CancellationException，使得 Job.cancel() 能够正常终止该协程。
+                    if (e is CancellationException) throw e
                     // 内部捕获异常并作为返回值，避免 async 失败导致级联取消，同时消除 Job 传递警告
                     e
                 }
@@ -442,5 +449,19 @@ class Navigator(
      */
     fun popUntil(path: String) {
         popUntil { it.node.path == path }
+    }
+
+    /**
+     * 销毁所有栈内页面并清空多 Tab 缓存，用于 Navigator 宿主被销毁时的资源释放。
+     */
+    internal fun disposeAll() {
+        // 问题：原先只有在 popBackStack / popToRoot 等显式出栈路径下才会调用 StackEntry.dispose()。
+        //      如果整个 Navigator 宿主被一次性销毁（例如嵌套路由所在页面被移除），这些 entry 永远不会走到出栈逻辑，
+        //      从而造成 ViewModelStore、预加载协程和保存状态的长期泄漏。
+        // 方案：提供统一的全量销毁入口，在宿主离开 Compose 树时集中释放所有 backStack 和 savedStateStacks 中的资源。
+        backStack.forEach { it.dispose() }
+        backStack.clear()
+        savedStateStacks.values.forEach { stack -> stack.forEach { it.dispose() } }
+        savedStateStacks.clear()
     }
 }

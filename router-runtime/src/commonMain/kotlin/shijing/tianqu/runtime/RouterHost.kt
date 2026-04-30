@@ -79,7 +79,18 @@ fun rememberNavigator(
             maxStackSize = maxStackSize
         )
     }
-    
+
+    // 问题：Navigator 的宿主（例如整个 RouterHost 或者嵌套路由）被移出 Compose 视图树时，
+    //      Navigator 持有的协程作用域会取消，但它不会自动清空 backStack，导致栈内页面的 ViewModel 和
+    //      SaveableStateHolder 发生严重内存泄漏（永远等不到 dispose）。
+    // 方案：为 navigator 绑定一个 DisposableEffect。当 Navigator 实例脱离 Compose 树时，
+    //      主动调用 disposeAll()，彻底清空回退栈和多 Tab 缓存栈里的资源。
+    DisposableEffect(navigator) {
+        onDispose {
+            navigator.disposeAll()
+        }
+    }
+
     if (navigator.backStack.isEmpty()) {
         navigator.navigateTo(startRoute)
     }
