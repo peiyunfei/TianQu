@@ -49,9 +49,9 @@
 
 ```toml
 [versions]
-tianqu-router-annotations = "1.0.4" # 替换为最新版本号
-tianqu-router-processor = "1.0.4"
-tianqu-router-runtime = "1.0.4"
+tianqu-router-annotations = "1.0.5" # 替换为最新版本号
+tianqu-router-processor = "1.0.5"
+tianqu-router-runtime = "1.0.5"
 ksp = "2.1.10-1.0.31" # 请务必与您项目的 Kotlin 版本一致
 
 [libraries]
