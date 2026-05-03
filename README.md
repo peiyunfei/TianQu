@@ -265,7 +265,10 @@ fun App() {
     // 2. 一行完成框架装配：
     //   - 自动注入 GlobalRouteAggregator.routers 和 services（无需手动传）
     //   - 自动初始化跨模块服务、监听路由事件、挂载返回键拦截
-    val navigator = rememberAppTianQuState {
+    val navigator = rememberTianQuApp {
+       // 自动注入 KSP 生成的产物
+       routes = GlobalRouteAggregator.routers
+       serviceProviders = GlobalRouteAggregator.services
         // 传入第一个页面的路径
         startRoute = "/main_tab"
         this.guards = guards
