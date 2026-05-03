@@ -20,9 +20,10 @@
 4. **强大的传参机制**：支持 URL Path 变量 (`/user/{id}`)、Query 参数 (`?id=1`)、**复杂大对象 (`extra`)** 以及**基于数据类的强类型安全传递**。
 5. **跨模块服务发现**：轻松实现接口下沉与依赖反转，提供优雅的 `rememberService<T>()` 协程安全挂起加载，确保服务单例的线程与协程安全。
 6. **生命周期与 ViewModel 绑定**：内置专属页面作用域，提供 `tianquViewModel<T>()`。支持跨平台无反射的 `@InjectViewModel` 自动依赖注入 `tianQuViewModelInject<T>()`，当页面出栈时，不仅自动销毁 ViewModel，还会**自动取消其绑定的所有协程任务**，彻底告别内存泄漏与空指针。
-7. **并发预加载引擎**：内置基于 `CompletableDeferred` 的非阻塞预加载器 (`RoutePreloader`)。在转场动画播放的同时，后台协程高并发加载目标页数据，实现“瞬开”体验。
-8. **离线 DeepLink 意图缓存**：内置基于协程无界 `Channel` 的意图队列。冷启动或多线程高频触发外部唤起时，底层协程会自动缓冲并按序消费路由，绝不丢失任何一次跳转意图。
-9. **高级导航表现**：内置单例模式控制 (`SINGLE_TOP`, `SINGLE_TASK`) 且支持**零重组代价**的参数复用更新、多返回栈（无缝衔接底层 Tab 栏）、自定义动画过渡、Compose 共享元素动画 (Shared Element) 及 404 全局降级。
+7. **多类型路由支持**：支持配置页面为全屏页面（`RouteType.SCREEN`）或悬浮弹窗（`RouteType.DIALOG`），通过同一套 Navigator 接口无缝调起和传参，甚至支持弹窗返回结果给底层全屏页面。
+8. **并发预加载引擎**：内置基于 `CompletableDeferred` 的非阻塞预加载器 (`RoutePreloader`)。在转场动画播放的同时，后台协程高并发加载目标页数据，实现“瞬开”体验。
+9. **离线 DeepLink 意图缓存**：内置基于协程无界 `Channel` 的意图队列。冷启动或多线程高频触发外部唤起时，底层协程会自动缓冲并按序消费路由，绝不丢失任何一次跳转意图。
+10. **高级导航表现**：内置单例模式控制 (`SINGLE_TOP`, `SINGLE_TASK`) 且支持**零重组代价**的参数复用更新、多返回栈（无缝衔接底层 Tab 栏）、自定义动画过渡、Compose 共享元素动画 (Shared Element) 及 404 全局降级。
 
 ---
 
@@ -240,46 +241,44 @@ claude mcp add tianqu --scope project -- java -jar .claude/mcp/tianqu-mcp-server
 ## 🚀 三、基础路由导航与全局初始化
 
 ### 1. 全局初始化 RouterHost
-在 Compose Multiplatform 的共享 UI 层 (`App.kt`) 根节点，创建 `Navigator` 并使用 `RouterHost` 承载。框架支持拦截器(Guards)和全局事件监听(如404处理)。
+在 Compose Multiplatform 的共享 UI 层 (`App.kt`) 根节点，调用 `rememberAppTianQuState` 完成框架装配，并使用 `RouterHost` 承载。框架会自动完成跨模块服务初始化、路由事件监听和返回键拦截，业务只需声明自己的策略。
 
 ```kotlin
 // App.kt
-import shijing.tianqu.router.generated.GlobalRouteAggregator
-import shijing.tianqu.runtime.*
-import shijing.tianqu.runtime.service.ServiceManager
-
 @Composable
 fun App() {
-    // 1. 初始化跨模块 Service 通信大表
-   ServiceManager.init(GlobalRouteAggregator.services)
-
-   // 示例：创建一个简单的局部路由守卫（只拦截特定路由）
-   val guards = remember {
-      listOf(
-         object : RouterGuard {
-            // 重写 matches 方法，实现局部拦截
-            override fun matches(context: RouterContext): Boolean {
-               // 仅当跳转到带有 /user 的路径时才触发此守卫
-               return context.url.startsWith("/user")
+    // 1. 定义路由拦截器（只有业务策略，框架装配已内部处理）
+    val guards = remember {
+        listOf(
+            object : RouterGuard {
+                override fun matches(context: RouterContext): Boolean {
+                    return context.url.startsWith("/user")
+                }
+                override suspend fun canActivate(context: RouterContext, chain: GuardChain): Boolean {
+                    println("🚀 [局部拦截器] 进入 User 模块，URL: ${context.url}")
+                    return chain.proceed(context)
+                }
             }
+        )
+    }
 
-            override suspend fun canActivate(context: RouterContext, chain: GuardChain): Boolean {
-               println("🚀 [局部拦截器] 发现正在尝试进入 User 模块，URL: ${context.url}")
-               return chain.proceed(context) // 放行并交给下一个守卫
+    // 2. 一行完成框架装配：
+    //   - 自动注入 GlobalRouteAggregator.routers 和 services（无需手动传）
+    //   - 自动初始化跨模块服务、监听路由事件、挂载返回键拦截
+    val navigator = rememberAppTianQuState {
+        // 传入第一个页面的路径
+        startRoute = "/main_tab"
+        this.guards = guards
+        onRouteEvent = { event, nav ->
+            when (event) {
+                is RouterEvent.NotFound -> nav.navigateTo("/main_tab") // 404 降级，如果找不到目标页面，跳转到/main_tab
+                is RouterEvent.Navigated -> println("✅ 跳转成功: ${event.url}")
             }
-         }
-      )
-   }
-   
-    // 2. 创建并记住 Navigator 实例，指定起始页与路由表
-    val navigator = rememberNavigator(
-        routes = GlobalRouteAggregator.routers,
-        startRoute = "/main_tab", // 启动页
-       guards = guards
-    )
+        }
+    }
 
     MaterialTheme {
-        // 3. 将 navigator 注入 RouteHost
+        // 3. RouterHost 接管全部路由渲染，Navigator 可随时通过 LocalNavigator.current 获取
         RouterHost(navigator = navigator)
     }
 }
@@ -338,54 +337,37 @@ fun HomeScreen(context: RouterContext) {
 ```
 
 ### 4. 物理返回键/侧滑手势返回拦截 (Android/iOS)
-在 Android 上，通常需要拦截系统的物理返回键；在 iOS 上，则是侧滑返回。框架可以通过简单的代码与系统的返回机制打通。
+在 Android 上，通常需要拦截系统的物理返回键；在 iOS 上，则是侧滑返回。**天衢框架已在 `router-runtime` 内部内置了跨平台 `BackHandler` 实现**，并由 `rememberAppTianQuState` 默认自动挂载，**无需业务层手动编写任何 `expect/actual` 桥接代码**。
 
-**第一步：基于 `expect/actual` 桥接跨平台 `BackHandler`**
+默认行为：当导航栈中多于 1 个页面时，物理返回键/侧滑手势会自动触发出栈。
 
-因为 Compose Multiplatform 官方暂未在 `commonMain` 中提供直接对应的拦截器，我们需要自行桥接：
+如需**禁用**默认的全局返回拦截（例如某些特殊场景需要完全自定义），可通过配置关闭：
 
 ```kotlin
-// 1. 在 commonMain 中定义 expect 函数
-@Composable
-expect fun BackHandler(enabled: Boolean = true, onBack: () -> Unit)
-
-// 2. 在 androidMain 中实现 actual (直接委托给 Android 的 Activity Compose)
-@Composable
-actual fun BackHandler(enabled: Boolean, onBack: () -> Unit) {
-    androidx.activity.compose.BackHandler(enabled = enabled, onBack = onBack)
-}
-
-// 3. 在 iosMain 中实现 actual
-@Composable
-actual fun BackHandler(enabled: Boolean, onBack: () -> Unit) {
-    // iOS 通常由原生的 UINavigationController 处理侧滑，也可在此桥接手势返回事件
+val navigator = rememberAppTianQuState {
+    startRoute = “/main_tab”
+    enableBackHandler = false // 关闭框架默认的返回键拦截
 }
 ```
 
-**第二步：在主入口拦截后退事件**
-
-建议在 `App.kt` 最外层配置上述全局的 `BackHandler`：
+如需在某个**深层子页面**拦截返回（例如表单页阻止意外返回），直接在该页面调用 `BackHandler` 即可，它会优先于全局拦截消费返回事件：
 
 ```kotlin
+@Router(path = “/edit_form”)
 @Composable
-fun App() {
-    val navigator = rememberNavigator(
-        routes = GlobalRouteAggregator.routers,
-        startRoute = "/main_tab"
-    )
+fun EditFormScreen(context: RouterContext) {
+    val navigator = LocalNavigator.current
+    var hasUnsavedChanges by remember { mutableStateOf(true) }
 
-    // 支持物理返回键 / 手势返回（当导航栈中多于1个页面时启用拦截并执行出栈）
-    BackHandler(enabled = navigator.backStack.size > 1) {
-        navigator.pop()
-    }
-
-    MaterialTheme {
-        RouterHost(navigator = navigator)
+    // 子页面的 BackHandler 优先消费，不会与全局冲突
+    BackHandler(enabled = hasUnsavedChanges) {
+        // 弹窗提示用户有未保存的内容
+        println(“⚠️ 有未保存的内容，请先保存再退出”)
     }
 }
 ```
 
-> **💡 多层嵌套拦截提示**：由于 Compose 的 `BackHandler` 遵循“就近拦截（子优先）”原则。如果您在某个深层子页面（例如填写表单页）也调用了自定义的 `BackHandler`，它会优先消费返回事件，完美覆盖全局的这个默认退栈逻辑，不会产生冲突！
+> **💡 多层嵌套拦截提示**：Compose 的 `BackHandler` 遵循”就近拦截（子优先）”原则。子页面的 `BackHandler` 会优先消费返回事件，完美覆盖全局的默认退栈逻辑，不会产生冲突。
 
 ### 5. 路由启动模式 (LaunchMode)：栈顶复用与栈内复用
 天衢 路由全面支持了类似 Android Activity 的高级启动模式 (`LaunchMode`)，并且由于采用纯 Compose 状态驱动，复用页面时**只有在参数发生实质性变化时才会触发重组**，实现了真正的“零开销复用”。
@@ -639,22 +621,20 @@ class UserDetailPreloader : RoutePreloader {
 // 一定要先创建对象
 val preloaders = remember { mapOf("/demo_preload" to UserDetailPreloader()) }
 
-val navigator = rememberNavigator(
-    routes = GlobalRouteAggregator.routers,
-    startRoute = "/home",
-    preloaders = preloaders // 绑定路由路径与对应的预加载器
-)
+val navigator = rememberAppTianQuState {
+    startRoute = "/home"
+    this.preloaders = preloaders // 绑定路由路径与对应的预加载器
+}
 ```
-请注意，不能通过下面的代码传递预加载器。 直接写 preloaders = mapOf(...)，这意味着每次重组时都会创建一个新的 Map 对象。
-rememberNavigator 会根据参数（包括 preloaders）来 remember 导航器。
+请注意，不能通过下面的代码传递预加载器。 直接写 `preloaders = mapOf(...)`，这意味着每次重组时都会创建一个新的 Map 对象。
+`rememberAppTianQuState` 会根据参数（包括 `preloaders`）来 remember 导航器。
 因为传进去的 Map 对象一直在变，导致 Compose 认为参数变了，从而不断地重新创建 Navigator 对象并清空页面栈，最终表现出来的就是不断刷新的“白屏”。
 ```kotlin
 // 错误示例
-val navigator = rememberNavigator(
-    routes = GlobalRouteAggregator.routers,
-    startRoute = "/home",
-    preloaders = mapOf("/demo_preload" to UserDetailPreloader()) // 这是错误的写法
-)
+val navigator = rememberAppTianQuState {
+    startRoute = "/home"
+    this.preloaders = mapOf("/demo_preload" to UserDetailPreloader()) // 这是错误的写法
+}
 ```
 如果不想在启动的时候就传递预加载器，可以在通过下面的方式
 ```kotlin
@@ -1063,22 +1043,20 @@ Image(
 ```
 
 ### 3. 全局路由 404 降级拦截处理
-意外跳转到了未注册的页面怎么办？天衢 不会发生崩溃，而是触发一个 `NotFound` 事件！您只需在 `App.kt` 初始化 `Navigator` 时监听流，即可实现自由调度或重定向。
+意外跳转到了未注册的页面怎么办？天衢 不会发生崩溃，而是触发一个 `NotFound` 事件！您只需在 `rememberAppTianQuState` 中配置 `onRouteEvent`，即可实现自由调度或重定向。
 
 ```kotlin
-val navigator = rememberNavigator(GlobalRouteAggregator.routers, "/home")
-
-// 在外层收集路由核心事件
-LaunchedEffect(navigator) {
-    navigator.routeEvents.collect { event ->
+val navigator = rememberAppTianQuState {
+    startRoute = "/home"
+    onRouteEvent = { event, nav ->
         when (event) {
             // 🌟 拦截到了空路由 /not_exist_page
-            is shijing.tianqu.runtime.RouterEvent.NotFound -> {
+            is RouterEvent.NotFound -> {
                 println("⚠️ [全局降级拦截] 找不到路由: ${event.url}")
                 // 您可以选择在这里跳转到一个专用的 H5 容错升级页面，或者回退到首页
-                navigator.navigateTo("/home")
+                nav.navigateTo("/home")
             }
-            is shijing.tianqu.runtime.RouterEvent.Navigated -> {
+            is RouterEvent.Navigated -> {
                 println("ℹ️ 跳转成功: ${event.url}")
             }
         }
@@ -1101,6 +1079,76 @@ DeepLinkManager.dispatch(url)
 **步骤 2：Navigator 自动消费**
 当 `Navigator` 初始化完成后，它会自动在内部协程中收集并消费这些被缓存的意图，确保用户无缝跳转到目标页面，绝不丢失任何一次外部唤醒！
 
+### 5. 声明一个弹窗路由 (Dialog)
+
+天衢支持将普通路由节点声明为弹窗类型，弹窗将悬浮展示在现有页面之上。
+您可以通过 `BackHandler` 和 `clickable` 拦截区域自由控制物理返回键与点击外部的关闭逻辑。
+
+```kotlin
+@Router(
+    path = "/demo_dialog",
+    // 指定类型为弹窗
+    type = RouteType.DIALOG
+)
+@Composable
+fun DemoDialogScreen(context: RouterContext) {
+    val navigator = LocalNavigator.current
+    var dismissOnClickOutside by remember { mutableStateOf(true) }
+    var dismissOnBackPress by remember { mutableStateOf(true) }
+
+    BackHandler(enabled = true) {
+        if (dismissOnBackPress) {
+            navigator.popBackStack()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                if (dismissOnClickOutside) {
+                    navigator.popBackStack()
+                }
+            },
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                )
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {}
+                .padding(24.dp)
+        ) {
+            Column {
+                Text("业务层控制弹窗行为演示")
+                Switch(
+                    checked = dismissOnClickOutside,
+                    onCheckedChange = { dismissOnClickOutside = it }
+                )
+                Switch(
+                    checked = dismissOnBackPress,
+                    onCheckedChange = { dismissOnBackPress = it }
+                )
+                Button(onClick = { navigator.popBackStack() }) {
+                    Text("关闭弹窗")
+                }
+            }
+        }
+    }
+}
+```
+
+上面的示例对应仓库中的 `composeApp/src/commonMain/kotlin/shijing/tianqu/screens/DemoDialogScreen.kt`，说明天衢不只支持全屏页面跳转，也支持将路由节点作为弹窗悬浮在当前页面之上。弹窗的遮罩、点击空白关闭、返回键关闭等交互由业务层自己定义。 
 
 ---
 

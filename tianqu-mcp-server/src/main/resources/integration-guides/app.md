@@ -80,28 +80,43 @@ tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>>().configureEach
 Step 3：初始化 RouterHost（App.kt 或 CommonUI 入口）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// 导入天衢框架生成的全局路由聚合器（由 KSP 自动生成，编译后可见）
+// 导入天衢框架生成的文件及高层装配入口
 import shijing.tianqu.router.generated.GlobalRouteAggregator
+import shijing.tianqu.runtime.rememberTianQuApp
 import shijing.tianqu.runtime.RouterHost
-import shijing.tianqu.runtime.rememberNavigator
-import shijing.tianqu.runtime.service.ServiceManager
 
 @Composable
 fun App() {
-    // 【第1步】初始化跨模块服务通信大表
-    // 必须在 RouterHost 启动前调用，否则 @Service 注解的实现类无法被发现
-    ServiceManager.init(GlobalRouteAggregator.services)
+    // 【第1步】通过框架提供的零样板装配入口获取 navigator
+    // 它会自动为您初始化服务表，并挂载 BackHandler 处理返回按键
+    val navigator = rememberTianQuApp {
+        // 【必填】注入 KSP 生成的路由表与服务表
+        routes = GlobalRouteAggregator.routers
+        serviceProviders = GlobalRouteAggregator.services
 
-    // 【第2步】创建并记住 Navigator 实例
-    // routes：由 KSP 聚合的全工程路由表
-    // startRoute：应用启动后展示的第一个页面路径
-    val navigator = rememberNavigator(
-        routes = GlobalRouteAggregator.routers,
+        // 【必填】应用启动后展示的第一个页面路径
         startRoute = "/home" // 替换为你的实际首页路径
-    )
+        
+        // （可选）配置路由守卫
+        // this.guards = listOf(...)
+        
+        // （可选）配置并发预加载器
+        // this.preloaders = mapOf(...)
+        
+        // （可选）全局路由事件回调，常用于 404 降级或打点
+        onRouteEvent = { event, nav ->
+            when (event) {
+                is RouterEvent.NotFound -> {
+                    println("拦截到未注册路由: ${event.url}")
+                    nav.navigateTo("/home") // 发生 404 时强制重定向
+                }
+                else -> {}
+            }
+        }
+    }
 
     MaterialTheme {
-        // 【第3步】将 navigator 注入 RouterHost，由 RouterHost 负责渲染导航栈
+        // 【第2步】将 navigator 注入 RouterHost，由其负责渲染整个应用的导航栈
         RouterHost(navigator = navigator)
     }
 }

@@ -62,3 +62,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+kotlin {
+    sourceSets {
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+        }
+    }
+}

@@ -14,7 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import shijing.tianqu.BackHandler
+import shijing.tianqu.runtime.BackHandler
 import shijing.tianqu.router.RouteType
 import shijing.tianqu.router.Router
 import shijing.tianqu.router.RouterContext

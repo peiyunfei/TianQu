@@ -74,13 +74,18 @@ Step 3：声明你的第一个路由页面
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import shijing.tianqu.router.Router
+import shijing.tianqu.router.RouteType
 import shijing.tianqu.runtime.RouterContext
 import shijing.tianqu.runtime.LocalNavigator
 
 // @Router 注解将此 Composable 函数注册为路由页面
 // path：路由路径，全局唯一，支持路径变量如 /user/{id}
 // transition：可选，指定页面切换动画，默认为 Slide
-@Router(path = "/{{moduleNameUnderscore}}/home")
+// type：可选，配置为全屏页面（SCREEN，默认）或悬浮弹窗（DIALOG）
+@Router(
+    path = "/{{moduleNameUnderscore}}/home",
+    type = RouteType.SCREEN
+)
 @Composable
 fun {{moduleNamePascal}}HomeScreen(
     // RouterContext 由框架自动注入，包含路由路径、路径参数、Query 参数及 extra 对象

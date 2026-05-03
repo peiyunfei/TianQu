@@ -1,8 +1,8 @@
 {
   "meta": {
-    "capabilitiesVersion": "1.0.0",
-    "frameworkVersion": "1.0.5",
-    "lastUpdated": "2026-05-02"
+    "capabilitiesVersion": "1.1.0",
+    "frameworkVersion": "1.0.6",
+    "lastUpdated": "2026-05-03"
   },
   "capabilities": [
   {
@@ -16,6 +16,14 @@
       "【必须声明路由上下文】所有使用 @Router 注解的 @Composable 页面函数，都必须声明 `context: RouterContext` 参数，例如 `fun HomeScreen(context: RouterContext)`，即使该页面目前不使用它。KSP 会在编译期按此签名生成路由表映射",
       "【状态保存约束】A页面跳转B页面后，框架为节省内存会将A移出组合树（底层依靠 rememberSaveableStateHolder 维持）。因此，业务页面中任何需要跨页面保持的 UI 状态（如输入内容、倒计时、返回结果等），必须且只能使用 rememberSaveable 声明，使用普通 remember 会在页面重新回到栈顶重组时丢失"
     ]
+  },
+  {
+    "feature": "路由类型配置（全屏/弹窗）",
+    "supported": true,
+    "description": "通过 @Router 的 type 参数配置路由为全屏页面（SCREEN）或悬浮弹窗（DIALOG），使用相同的 Navigator 接口进行跳转和参数回传",
+    "annotations": ["@Router(type = RouteType.DIALOG)"],
+    "apiEntries": ["RouteType.SCREEN", "RouteType.DIALOG", "BackHandler"],
+    "constraints": ["声明为 DIALOG 时，页面组件不会铺满屏幕，下方可见上一个界面的 UI。弹窗需自行处理背景遮罩、点击外部关闭和拦截物理返回键（借助 BackHandler）"]
   },
   {
     "feature": "页面参数传递（Path & Query）",

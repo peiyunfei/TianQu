@@ -5,12 +5,27 @@ import shijing.tianqu.router.GuardChain
 import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.RouterGuard
 import shijing.tianqu.runtime.Navigator
+import shijing.tianqu.runtime.NavigatorAwareRouterGuard
 import shijing.tianqu.runtime.RouterNode
 import shijing.tianqu.runtime.transition.FadeTransitionStrategy
 
-class DynamicFeatureGuard : RouterGuard {
-    
-    var navigator: Navigator? = null
+/**
+ * 动态路由守卫示例：演示在路由拦截时动态下载并注册新模块。
+ *
+ * 实现了 [NavigatorAwareRouterGuard] 后，框架会在 Navigator 创建完成后自动注入实例，
+ * 接入方无需再在 App.kt 里手写 `dynamicGuard.navigator = navigator`。
+ */
+class DynamicFeatureGuard : RouterGuard, NavigatorAwareRouterGuard {
+
+    // 通过 NavigatorAwareRouterGuard.onNavigatorReady 由框架自动注入，外部不可访问
+    private var navigator: Navigator? = null
+
+    /**
+     * 由框架在 Navigator 创建完成后自动调用，完成注入。
+     */
+    override fun onNavigatorReady(navigator: Navigator) {
+        this.navigator = navigator
+    }
     
     // 模拟尚未加载的远程模块列表
     private val uninitializedModules = mutableListOf("/dynamic_feature")
