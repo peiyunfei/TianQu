@@ -1,7 +1,7 @@
 {
-  "serverVersion": "1.0.2",
+  "serverVersion": "1.0.3",
   "frameworkVersion": "1.0.6",
-  "skillVersion": "1.0.1",
+  "skillVersion": "1.0.2",
   "capabilitiesVersion": "1.1.0",
   "integrationGuideVersion": "1.1.0",
   "installerVersion": "1.0.2",
