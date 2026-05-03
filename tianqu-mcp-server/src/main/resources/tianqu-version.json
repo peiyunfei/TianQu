@@ -1,0 +1,12 @@
+{
+  "serverVersion": "1.0.0",
+  "frameworkVersion": "1.0.5",
+  "skillVersion": "1.0.0",
+  "capabilitiesVersion": "1.0.0",
+  "integrationGuideVersion": "1.0.0",
+  "installerVersion": "1.0.0",
+  "kspVersion": "2.1.10-1.0.31",
+  "minJavaVersion": 17,
+  "releaseDate": "2026-05-02",
+  "updateMessage": ""
+}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tianqu": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "tianqu-mcp-server/build/libs/tianqu-mcp-server-all.jar"
+      ]
+    }
+  }
+}

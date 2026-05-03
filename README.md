@@ -159,7 +159,85 @@ tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>>().configureEach
 
 ---
 
-## 🚀 二、基础路由导航与全局初始化
+## 🤖 二、零代码：AI 辅助智能接入 (Claude Code & MCP)
+
+> 觉得 Gradle 配置繁琐？天衢提供了官方 **Claude Code Skill** 与 **MCP Server**，让您通过**一句话**完成从依赖接入到页面实现的全流程，并支持**自动感知版本更新**。
+
+### 🎯 一句话安装（推荐）
+
+在您的项目根目录执行以下命令，即可自动下载 Skill、MCP Server 并完成注册：
+
+```bash
+curl -fsSL https://gitee.com/zhongte/TianQu/raw/master/install-claude.sh | bash
+```
+
+> **前提条件：需要 Java 17+** 和已安装的 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)。安装完成后，在项目目录执行 `claude` 启动即可。
+
+### ✨ 配置完成后，您可以这样使用
+
+在终端启动 Claude Code（`claude`），输入：
+
+```
+接入天衢框架
+```
+Claude Code 就会帮你接入天衢框架，您不需要写任何代码。
+
+接入天衢框架后，您还可以直接描述需求：
+
+```
+天衢实现了哪些功能
+使用协程实现页面间通信
+实现栈顶复用或者栈内复用
+实现跨模块通信
+在商品模块用天衢写一个带有预加载的商品详情页
+配置天衢的全局 404 降级拦截
+```
+
+对于天衢支持的功能，您都可以在 Claude Code 里面输入一句话来实现，再也不需要自己写代码了。
+
+> 如果您让 Claude Code 实现某个天衢不支持的功能，它会明确提示"天衢暂不支持该能力"，不会偷偷用别的框架替代。
+
+### 🔄 自动更新机制
+
+天衢的 Claude Code 接入组件内置了**每日版本检查**机制：
+
+- 每次使用天衢相关指令时，AI 会自动检查是否有新版本（每天最多访问一次远端，其余时间使用本地缓存，不影响速度）
+- **发现新版本时**：AI 会主动询问您是否立即升级
+- **您同意后**：AI 自动执行升级命令，下载最新的 Skill 和 MCP Server
+- **升级完成后**：AI 会提示您**重启 Claude Code**（完全退出后重启），以加载新版本的 MCP Server 进程和 Skill 文件
+
+如果您不想等到自动检查，可以随时对 Claude Code 说：
+
+```
+强制检查天衢更新
+```
+
+AI 会立即忽略本地缓存，访问远端获取最新版本信息。
+
+版本信息由仓库根目录的 [`version.json`](./version.json) 维护，每次天衢新增功能或修复接入问题时同步更新。
+
+### 🔧 手动配置（可选）
+
+如果 `curl | bash` 在您的网络环境中不可用，也可以按以下步骤手动配置：
+
+**第一步：获取 MCP Server JAR**  
+从本仓库的 [`bin/tianqu-mcp-server-all.jar`](./bin/tianqu-mcp-server-all.jar) 下载，放到您项目的 `.claude/mcp/` 目录下。
+
+**第二步：注册 MCP Server**  
+在您项目根目录执行（或手动编辑 `.claude/settings.json`）：
+
+```bash
+claude mcp add tianqu --scope project -- java -jar .claude/mcp/tianqu-mcp-server-all.jar
+```
+
+**第三步：添加 Skill 文件**  
+创建 `.claude/skills/tianqu/SKILL.md`，内容从本仓库 [`.claude/skills/tianqu/SKILL.md`](./.claude/skills/tianqu/SKILL.md) 复制即可。
+
+**后续升级**：重新执行一遍第一步的 `curl | bash` 命令，即可自动覆盖升级 Skill 与 JAR，升级后**重启 Claude Code** 加载新版本。
+
+---
+
+## 🚀 三、基础路由导航与全局初始化
 
 ### 1. 全局初始化 RouterHost
 在 Compose Multiplatform 的共享 UI 层 (`App.kt`) 根节点，创建 `Navigator` 并使用 `RouterHost` 承载。框架支持拦截器(Guards)和全局事件监听(如404处理)。
@@ -208,7 +286,7 @@ fun App() {
 ```
 
 ### 2. 获取 Navigator 的多种方式
-除了通过 CompositionLocal 获取，如果您处于协程作用域内，还可以直接从上下文中提取！
+页面跳转需要先拿到Navigator对象，然后调用navigateTo。获取Navigator对象，除了通过 CompositionLocal 获取，如果您处于协程作用域内，还可以直接从上下文中提取！
 
 ```kotlin
 import shijing.tianqu.router.Router
@@ -231,6 +309,7 @@ fun HomeScreen(context: RouterContext) {
         routerScope.launch {
             // 通过协程上下文直接提取当前的 Navigator
             val nav = coroutineContext[Navigator] ?: return@launch
+            // 跳转到目标页面
             nav.navigateTo("/profile")
         }
     }) {
@@ -239,7 +318,26 @@ fun HomeScreen(context: RouterContext) {
 }
 ```
 
-### 3. 物理返回键/侧滑手势返回拦截 (Android/iOS)
+### 3. 页面状态保存（remember vs rememberSaveable）【重要】
+天衢底层的 `RouterHost` 通过 `rememberSaveableStateHolder` 管理返回栈——当 A 跳转到 B 时，A 会被移出组合树；从 B 返回时，A 重新进入组合树并恢复状态。框架已帮你处理了底层的 `SaveableStateHolder`，**业务侧只需要用 `rememberSaveable` 声明需要跨页面保留的 UI 状态即可**。
+
+```kotlin
+@Router("/home")
+@Composable
+fun HomeScreen(context: RouterContext) {
+    // ❌ 错误写法：跳转后返回，该状态会丢失（重置为 0）
+    // var testCounter by remember { mutableStateOf(0) }
+
+    // ✅ 正确写法：跳转后返回，状态依然保留
+    var testCounter by rememberSaveable { mutableStateOf(0) }
+
+    Button(onClick = { testCounter++ }) {
+        Text("计数值: $testCounter")
+    }
+}
+```
+
+### 4. 物理返回键/侧滑手势返回拦截 (Android/iOS)
 在 Android 上，通常需要拦截系统的物理返回键；在 iOS 上，则是侧滑返回。框架可以通过简单的代码与系统的返回机制打通。
 
 **第一步：基于 `expect/actual` 桥接跨平台 `BackHandler`**
@@ -289,7 +387,7 @@ fun App() {
 
 > **💡 多层嵌套拦截提示**：由于 Compose 的 `BackHandler` 遵循“就近拦截（子优先）”原则。如果您在某个深层子页面（例如填写表单页）也调用了自定义的 `BackHandler`，它会优先消费返回事件，完美覆盖全局的这个默认退栈逻辑，不会产生冲突！
 
-### 4. 路由启动模式 (LaunchMode)：栈顶复用与栈内复用
+### 5. 路由启动模式 (LaunchMode)：栈顶复用与栈内复用
 天衢 路由全面支持了类似 Android Activity 的高级启动模式 (`LaunchMode`)，并且由于采用纯 Compose 状态驱动，复用页面时**只有在参数发生实质性变化时才会触发重组**，实现了真正的“零开销复用”。
 
 **如何使用：**
@@ -315,7 +413,7 @@ fun SingleTaskScreen(context: RouterContext) {
 
 > **💡 最佳实践**：得益于 Compose 的 `SaveableStateHolder`，在 `SINGLE_TASK` 触发上层页面退栈而使复用页面重新展示时，原页面的滚动位置、输入框状态等均会**原样保留且无缝衔接动画**，完美还原 Android 的 `onNewIntent` 体验！
 
-### 5. 自定义页面切换动画
+### 6. 自定义页面切换动画
 天衢 路由内置了常见的转场动画（如 `Fade`, `Slide`, `Scale`, `None`），默认使用的是`Slide`，这是安卓上经典的页面切换动画。如果您需要极其炫酷的自定义动画，可以直接使用 `@Transition` 注解和 `BaseTransitionStrategy` 轻松实现，且完全支持 Compose 官方的动画 API！
 
 **实现步骤：**
@@ -368,7 +466,7 @@ KSP 会自动将您的自定义动画收集到聚合器中，跳转时无缝衔�
 
 ---
 
-## 🎯 三、传参大满贯：各种传参场景与代码示例
+## 🎯 四、传参大满贯：各种传参场景与代码示例
 
 天衢 路由全面覆盖了不同场景的数据传递需求，不再有传统框架传参类型容易丢失的问题。
 
@@ -514,7 +612,7 @@ fun TypeSafeScreen(context: RouterContext) {
 
 ---
 
-## ⚡️ 四、极致性能：非阻塞并发数据预加载 (Route Pre-fetching)
+## ⚡️ 五、极致性能：非阻塞并发数据预加载 (Route Pre-fetching)
 
 传统的页面开发模式往往面临两难选择：要么**先跳转再请求**（进入页面后有一段骨架屏/Loading空白期等待数据），要么**先请求再跳转**（用户点击按钮后界面卡住无响应，等数据回来了才突然跳转）。
 
@@ -585,7 +683,7 @@ fun UserDetailScreen(context: RouterContext) {
 
 ---
 
-## 🔄 五、页面结果回传 (页面间双向通信)
+## 🔄 六、页面结果回传 (页面间双向通信)
 
 处理“选择联系人”、“修改设置后返回数据”等需求时，天衢 提供了极为优雅的挂起式协程解决方案。
 
@@ -595,7 +693,7 @@ fun UserDetailScreen(context: RouterContext) {
 ```kotlin
 @Router(path = "/settings")
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(context: RouterContext) {
     val navigator = LocalNavigator.current
     
     Button(onClick = {
@@ -611,8 +709,12 @@ fun SettingsScreen() {
 告别嵌套“地狱回调”，像写同步代码一样写异步等待！
 *(⚠️ 警告：请务必在与页面生命周期绑定的 `navigator.coroutineScope` 内启动协程，否则可能会因为屏幕重组导致协程取消！)*
 
+> **⚠️ 结果展示状态必须使用 `rememberSaveable`**
+> 如果你要把 `awaitNavigateForResult()` 得到的返回值展示在当前页面 UI 上，承接结果的状态必须写成 `rememberSaveable`，不要写成普通 `remember`。因为从目标页返回后，当前页可能发生状态恢复；此时如果使用 `remember`，即使已经拿到结果，界面状态也可能被重置，表现为“拿不到返回值”或“返回值一闪而过”。
+
 ```kotlin
 val navigator = LocalNavigator.current
+// 正确写法：用 rememberSaveable 保存页面恢复后的结果展示状态
 var returnedResult by rememberSaveable { mutableStateOf<String?>(null) }
 
 Button(onClick = {
@@ -652,7 +754,7 @@ Button(onClick = {
 
 ---
 
-## 🔌 六、跨模块解耦：服务发现 (Service Discovery)
+## 🔌 七、跨模块解耦：服务发现 (Service Discovery)
 
 路由不仅为了页面跳转，也是为了跨模块间的**接口调用与反向依赖注入**。上层 `app` 可以调用底层 `feature` 模块的具体实现，而无需互相强依赖。
 
@@ -685,7 +787,7 @@ class UserServiceImpl : UserService {
 import shijing.tianqu.runtime.utils.rememberService
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(context: RouterContext) {
     // 🔥 自动安全挂起加载，支持自动重组
     val userService = rememberService<UserService>()
     
@@ -712,7 +814,7 @@ fun fetchUserData() {
 
 ---
 
-## 🧬 七、ViewModel 与页面生命周期深度绑定
+## 🧬 八、ViewModel 与页面生命周期深度绑定
 
 原生的 `viewModel()` 在纯 Compose Multiplatform 项目中往往缺乏路由弹栈感知能力。天衢 提供了与**单次页面路由同生共死**的专有 ViewModel，并支持三种不同的获取方式，满足各种复杂场景的需求。
 
@@ -747,7 +849,7 @@ import shijing.tianqu.runtime.tianquViewModel
 
 @Router(path = "/demo_viewmodel")
 @Composable
-fun DemoViewModelScreen() {
+fun DemoViewModelScreen(context: RouterContext) {
     // 自动通过反射调用无参构造函数创建 ViewModel
     val viewModel = tianquViewModel<CounterViewModel>()
     // ...
@@ -775,7 +877,7 @@ class CounterViewModelFactory : ViewModelProvider.Factory {
 
 @Router(path = "/demo_viewmodel")
 @Composable
-fun DemoViewModelScreen() {
+fun DemoViewModelScreen(context: RouterContext) {
     // 传入自定义 Factory 进行实例化
     val viewModel = tianquViewModel<CounterViewModel>(factory = CounterViewModelFactory())
     // ...
@@ -804,7 +906,7 @@ import shijing.tianqu.runtime.tianQuViewModelInject
 
 @Router(path = "/demo_viewmodel")
 @Composable
-fun DemoViewModelScreen() {
+fun DemoViewModelScreen(context: RouterContext) {
     // 底层自动从 ServiceLocator 获取生成的工厂并实例化，无需反射！
     val viewModel = tianQuViewModelInject<CounterViewModel>()
     // ...
@@ -819,7 +921,7 @@ fun DemoViewModelScreen() {
 
 ---
 
-## 🧩 八、协程驱动的动态按需懒加载 (Dynamic Feature)
+## 🧩 九、协程驱动的动态按需懒加载 (Dynamic Feature)
 
 在大型项目中，为了减小包体积或加快初始启动速度，某些业务模块可以设计为**动态下载与按需加载**。在传统路由中，这往往需要复杂的异步回调与占位页面。
 
@@ -872,7 +974,7 @@ class DynamicFeatureGuard : RouterGuard {
 
 // 2. 业务侧发起调用并展示 Loading UI
 @Composable
-fun HomeScreen() {
+fun HomeScreen(context: RouterContext) {
     val navigator = LocalNavigator.current
     val coroutineScope = rememberCoroutineScope()
     // 维护按钮的加载状态
@@ -902,7 +1004,7 @@ fun HomeScreen() {
 
 ---
 
-## 🎨 九、其他极客能力全景公开
+## 🎨 十、其他极客能力全景公开
 
 ### 1. 多返回栈嵌套管理与 Tab 状态持久化
 App 主页往往包含底部的多个 Tab。天衢 底层深度打通了 `SaveableStateHolder`，完美解决“切换 Tab 重新渲染导致输入内容与滚动条丢失”的问题。这是一种原生的“单宿主+多挂载点”轻量实现：
@@ -910,7 +1012,7 @@ App 主页往往包含底部的多个 Tab。天衢 底层深度打通了 `Saveab
 ```kotlin
 @Router(path = "/main_tab")
 @Composable
-fun MainTabScreen() {
+fun MainTabScreen(context: RouterContext) {
     // 1. 保存 Tab 选项索引
     var selectedTab by rememberSaveable { mutableStateOf(0) }
     // 2. 拿到自带的状态持久化容器

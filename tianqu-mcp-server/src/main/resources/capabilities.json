@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "capabilitiesVersion": "1.0.0",
+    "frameworkVersion": "1.0.5",
+    "lastUpdated": "2026-05-02"
+  },
+  "capabilities": [
+  {
+    "feature": "基础路由接入",
+    "supported": true,
+    "description": "通过 @Router 注解注册 Compose 页面，KSP 编译期自动生成路由表，无需手动注册",
+    "annotations": ["@Router"],
+    "apiEntries": ["RouterHost", "rememberNavigator", "GlobalRouteAggregator", "Navigator.navigateTo"],
+    "constraints": [
+      "仅支持 Compose Multiplatform 页面，不支持传统 Fragment/View 路由",
+      "【必须声明路由上下文】所有使用 @Router 注解的 @Composable 页面函数，都必须声明 `context: RouterContext` 参数，例如 `fun HomeScreen(context: RouterContext)`，即使该页面目前不使用它。KSP 会在编译期按此签名生成路由表映射",
+      "【状态保存约束】A页面跳转B页面后，框架为节省内存会将A移出组合树（底层依靠 rememberSaveableStateHolder 维持）。因此，业务页面中任何需要跨页面保持的 UI 状态（如输入内容、倒计时、返回结果等），必须且只能使用 rememberSaveable 声明，使用普通 remember 会在页面重新回到栈顶重组时丢失"
+    ]
+  },
+  {
+    "feature": "页面参数传递（Path & Query）",
+    "supported": true,
+    "description": "通过 URL 传递基础类型参数，支持 Path 变量 /user/{id} 和 Query 参数 ?key=value",
+    "annotations": [],
+    "apiEntries": ["RouterContext.pathParams", "RouterContext.queryParams", "Navigator.navigateTo"],
+    "constraints": []
+  },
+  {
+    "feature": "页面参数传递（复杂对象 extra）",
+    "supported": true,
+    "description": "通过 extra 字段传递内存级别的复杂对象，目标页通过 context.extra as? T 安全解包",
+    "annotations": [],
+    "apiEntries": ["Navigator.navigateTo(path, extra)", "RouterContext.extra"],
+    "constraints": ["extra 对象不会被序列化，仅在内存中传递，不适合 DeepLink 场景"]
+  },
+  {
+    "feature": "强类型安全传参",
+    "supported": true,
+    "description": "基于 kotlinx.serialization，通过 navigateArgs 传递数据类，目标页 getTypedArgs<T>() 反序列化",
+    "annotations": ["@Serializable（kotlinx.serialization）"],
+    "apiEntries": ["Navigator.navigateArgs", "RouterContext.getTypedArgs"],
+    "constraints": ["参数类需标注 @Serializable，需引入 kotlinx-serialization-json 依赖"]
+  },
+  {
+    "feature": "挂起式页面结果回传",
+    "supported": true,
+    "description": "调用方通过 awaitNavigateForResult 挂起等待目标页返回值，目标页 popBackStack(result) 传回结果",
+    "annotations": [],
+    "apiEntries": ["Navigator.awaitNavigateForResult", "Navigator.popBackStack(result)", "Navigator.navigateWithResult"],
+    "constraints": [
+      "需在与页面生命周期绑定的 navigator.coroutineScope 内启动协程，避免屏幕重组导致协程取消",
+      "【极易踩坑】展示返回结果的 UI 状态必须用 rememberSaveable 声明（而非普通 remember）。从目标页返回时当前页会经历状态恢复，普通 remember 会被重置，导致已拿到的结果被清空、界面无法显示返回值"
+    ]
+  },
+  {
+    "feature": "路由守卫（RouterGuard）",
+    "supported": true,
+    "description": "挂起式路由拦截器，canActivate 为 suspend 函数，可在守卫中发起网络请求、弹窗请求权限等",
+    "annotations": [],
+    "apiEntries": ["RouterGuard", "RouterGuard.canActivate", "RouterGuard.matches", "GuardChain.proceed"],
+    "constraints": []
+  },
+  {
+    "feature": "跨模块服务发现",
+    "supported": true,
+    "description": "通过 @Service 注解暴露服务实现，KSP 自动注册，任意模块通过 ServiceManager 或 rememberService 获取",
+    "annotations": ["@Service"],
+    "apiEntries": ["ServiceManager.getService", "ServiceManager.getServiceAsync", "rememberService"],
+    "constraints": ["服务接口应放在公共基础模块，实现类放在业务模块"]
+  },
+  {
+    "feature": "ViewModel 与页面生命周期绑定",
+    "supported": true,
+    "description": "提供与路由页面同生共死的 ViewModel，页面出栈时自动触发 onCleared() 并取消绑定协程",
+    "annotations": ["@InjectViewModel"],
+    "apiEntries": ["tianquViewModel", "tianQuViewModelInject"],
+    "constraints": []
+  },
+  {
+    "feature": "路由启动模式",
+    "supported": true,
+    "description": "支持 STANDARD / SINGLE_TOP / SINGLE_TASK 三种启动模式，参数变化时才触发重组",
+    "annotations": ["@Router(launchMode = LaunchMode.SINGLE_TOP)"],
+    "apiEntries": ["LaunchMode.STANDARD", "LaunchMode.SINGLE_TOP", "LaunchMode.SINGLE_TASK"],
+    "constraints": []
+  },
+  {
+    "feature": "自定义页面切换动画",
+    "supported": true,
+    "description": "通过 @Transition 注解定义自定义动画策略，继承 BaseTransitionStrategy 实现入场/出场动画",
+    "annotations": ["@Transition", "@Router(transition = \"name\")"],
+    "apiEntries": ["BaseTransitionStrategy"],
+    "constraints": []
+  },
+  {
+    "feature": "Compose 共享元素动画",
+    "supported": true,
+    "description": "通过 routerSharedBounds(key) 为发起页和目标页组件打上相同 Key，自动实现共享元素动画",
+    "annotations": [],
+    "apiEntries": ["routerSharedBounds"],
+    "constraints": ["依赖 Compose 1.7+ 的共享元素能力"]
+  },
+  {
+    "feature": "并发数据预加载",
+    "supported": true,
+    "description": "跳转时同步启动预加载协程，在转场动画期间并发加载数据，目标页 rememberPreloadData<T>() 获取结果",
+    "annotations": [],
+    "apiEntries": ["RoutePreloader", "rememberNavigator(preloaders=...)", "Navigator.registerPreloader", "rememberPreloadData"],
+    "constraints": ["preloaders 参数需通过 remember 包裹，避免每次重组创建新对象导致 Navigator 重建"]
+  },
+  {
+    "feature": "动态路由（按需加载模块）",
+    "supported": true,
+    "description": "在路由守卫中挂起执行动态下载，完成后调用 registerDynamicRoutes 注册新路由，上层无感知",
+    "annotations": [],
+    "apiEntries": ["Navigator.registerDynamicRoutes", "Navigator.hasRoute", "RouterNode"],
+    "constraints": []
+  },
+  {
+    "feature": "DeepLink 离线意图缓存",
+    "supported": true,
+    "description": "冷启动时通过 DeepLinkManager.dispatch 缓存意图，Navigator 初始化后自动按序消费，不丢失跳转",
+    "annotations": [],
+    "apiEntries": ["DeepLinkManager.dispatch"],
+    "constraints": []
+  },
+  {
+    "feature": "全局 404 降级拦截",
+    "supported": true,
+    "description": "通过监听 navigator.routeEvents 收集 RouterEvent.NotFound 事件，实现未知路由的全局容错处理",
+    "annotations": [],
+    "apiEntries": ["Navigator.routeEvents", "RouterEvent.NotFound", "RouterEvent.Navigated"],
+    "constraints": []
+  },
+  {
+    "feature": "多返回栈 / Tab 状态持久化",
+    "supported": true,
+    "description": "结合 SaveableStateHolder 的 SaveableStateProvider，切换 Tab 时保留各 Tab 的滚动位置、输入状态等",
+    "annotations": [],
+    "apiEntries": ["rememberSaveableStateHolder", "SaveableStateHolder.SaveableStateProvider"],
+    "constraints": []
+  },
+  {
+    "feature": "传统 Android Fragment 路由",
+    "supported": false,
+    "reason": "天衢是纯 Compose Multiplatform 架构，不支持 Fragment 切换或 FragmentManager 操作"
+  },
+  {
+    "feature": "JVM ASM 字节码插桩",
+    "supported": false,
+    "reason": "天衢彻底摆脱了 ASM 依赖，不依赖任何字节码插桩技术"
+  },
+  {
+    "feature": "基于回调的异步路由",
+    "supported": false,
+    "reason": "天衢全面采用 suspend 函数与 Flow，不提供传统回调接口，不推荐绕过协程实现回调式路由"
+  },
+  {
+    "feature": "View 体系（非 Compose）的页面路由",
+    "supported": false,
+    "reason": "天衢仅支持 Compose Multiplatform 的 @Composable 页面，不支持传统 View/XML 页面"
+  },
+  {
+    "feature": "运行时反射注册路由",
+    "supported": false,
+    "reason": "天衢通过 KSP 在编译期生成路由表，不支持运行时通过反射扫描或动态注册（动态路由需通过 registerDynamicRoutes 显式注册）"
+  }
+  ]
+}
