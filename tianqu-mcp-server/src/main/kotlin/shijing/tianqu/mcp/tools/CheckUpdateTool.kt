@@ -22,7 +22,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 private const val REMOTE_VERSION_URL =
-    "https://gitee.com/zhongte/TianQu/raw/master/version.json"
+    "https://raw.giteeusercontent.com/zhongte/TianQu/raw/master/version.json"
 
 private const val UPGRADE_COMMAND =
     "curl -fsSL https://gitee.com/zhongte/TianQu/raw/master/install-claude.sh | bash"
