@@ -181,6 +181,7 @@ private fun fetchRemoteVersion(): Pair<JsonObject?, String?> {
     return runCatching {
         val client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
+            .followRedirects(HttpClient.Redirect.NORMAL)
             .build()
         val request = HttpRequest.newBuilder()
             .uri(URI.create(REMOTE_VERSION_URL))
