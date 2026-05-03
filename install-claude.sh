@@ -10,7 +10,7 @@
 
 set -e
 
-INSTALLER_VERSION="1.0.0"
+INSTALLER_VERSION="1.0.2"
 GITEE_BASE_URL="https://gitee.com/zhongte/TianQu"
 GITEE_RAW="${GITEE_BASE_URL}/raw/master"
 SKILL_URL="${GITEE_RAW}/.claude/skills/tianqu/SKILL.md"
