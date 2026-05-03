@@ -100,11 +100,37 @@ cd build/central-bundle && zip -r ../tianqu-release.zip .
 
 ### 第 6 步：询问是否需要收尾工作
 
-询问用户是否还需要：
+询问用户是否还需要执行以下任意项（按需逐一确认）：
 
-- 更新 README.md 里的版本号引用
-- 打 git tag（例如 `v1.0.6`）
-- 更新 `version.json` 和 `tianqu-version.json` 并重新编译 MCP Server JAR
+#### 6.1 更新 README.md 版本号引用
+将文档中所有旧版本号替换为本次发布的版本号。
+
+#### 6.2 打 git tag 并推送
+```bash
+git tag v{版本号}
+git push origin v{版本号}   # Gitee
+git push github v{版本号}   # GitHub（如已配置）
+```
+
+#### 6.3 更新 `version.json` 和 `tianqu-version.json` 并重新编译 MCP Server JAR
+
+如果本次发版有新增功能或接入方式变化，需同步更新以下内容：
+
+1. 修改 `tianqu-mcp-server/src/main/resources/capabilities.json`，新增/更新能力条目，更新 `capabilitiesVersion`
+2. 修改 `tianqu-mcp-server/src/main/resources/integration-guides/app.md` 或 `feature.md`，更新示例代码
+3. **必须检查并同步更新 `install-claude.sh`**：至少确认其中的 Release 标签/JAR 下载 URL 是否已切到本次发布版本；如果安装路径、下载地址、注册命令有变化，也必须一并修改
+4. 重新编译 MCP Server JAR：
+   ```bash
+   ./gradlew :tianqu-mcp-server:shadowJar
+   cp tianqu-mcp-server/build/libs/tianqu-mcp-server-all.jar bin/
+   ```
+5. 同步更新两个 `version.json`，至少修改以下字段：
+   - `serverVersion`（每次重新编译 JAR 时必须递增，这是触发接入方更新提醒的唯一字段）
+   - `frameworkVersion`（改为本次 Maven 版本号）
+   - `capabilitiesVersion`（如修改了 capabilities.json）
+   - `integrationGuideVersion`（如修改了接入指南）
+   - `releaseDate`（改为今天日期）
+   - `updateMessage`（填写本次更新摘要）
 
 等待用户决定，按需执行。
 
