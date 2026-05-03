@@ -4,17 +4,17 @@ description: 接入天衢路由框架，或使用天衢实现具体功能。在�
 version: 1.0.0
 ---
 
-# Purpose
+# 核心目的
 帮助用户在自己的项目中零手写代码接入天衢框架，或基于天衢实现已有能力范围内的功能。
 
-# When to use
+# 何时使用
 当用户提出以下类型需求时使用：
 - 帮我接入天衢框架
 - 在当前项目中配置天衢路由
 - 用天衢实现某个路由页面 / 参数传递 / 服务发现 / ViewModel 注入 / 页面结果回传 / DeepLink / 动态路由 等功能
 - 判断某项需求是否在天衢支持范围内
 
-# Mandatory Workflow
+# 强制工作流
 你必须严格按以下顺序执行，禁止跳步：
 
 1. **先调用 `tianqu_check_update`**
@@ -43,13 +43,34 @@ version: 1.0.0
    - 按模块类型获取精确的接入指令、Gradle 配置模板、初始化模板
    - 根据返回结果修改接入方项目
 
-# Constraints
+# 约束与限制
 - 遇到不确定的地方（版本选择、目录结构冲突、配置歧义、模块类型无法确定）不要自行决定，必须先向用户确认，并给出建议方案
-- 生成到接入方项目中的代码必须带必要注释，解释关键配置与初始化逻辑
+- **生成到接入方项目中的所有代码，必须带必要的中文注释**，解释关键配置、初始化逻辑和使用方式；尤其是模板代码（Gradle 配置、RouterHost 初始化、守卫、ViewModel 注入等），每一段都要有注释
 - 优先复用接入方现有工程结构，不要擅自引入额外抽象
 - 如果需求超出天衢边界，不要尝试"兼容实现"或偷偷用别的框架替代
+- **使用协程实现页面间结果回传时，必须使用 `navigator.coroutineScope.launch { }` 来开启协程，不可以使用 `rememberCoroutineScope()` 或其他外部 scope**。原因是 `awaitNavigateForResult` 是挂起函数，调用方跳转后页面会离开组合树，`rememberCoroutineScope` 的 scope 会随之取消，导致永远收不到返回数据；而 `navigator.coroutineScope` 的生命周期与 Navigator 绑定，跳转期间不会取消。
+  正确示例：
+  ```kotlin
+  Button(onClick = {
+      // ✅ 必须用 navigator.coroutineScope，跳转后页面离开组合树，
+      //    rememberCoroutineScope 会被取消，导致收不到返回数据
+      navigator.coroutineScope.launch {
+          val result = navigator.awaitNavigateForResult("/detail")
+          // 处理返回结果
+      }
+  }) { Text("跳转并等待结果") }
+  ```
+  错误示例（禁止这样写）：
+  ```kotlin
+  val scope = rememberCoroutineScope() // ❌ 禁止！页面离开组合树后此 scope 会取消
+  Button(onClick = {
+      scope.launch {
+          val result = navigator.awaitNavigateForResult("/detail") // 永远收不到结果
+      }
+  }) { Text("跳转") }
+  ```
 
-# Output Expectations
+# 输出期望
 - 如果是"接入框架"类需求：完成依赖接入、KSP 配置、sourceSet 配置、入口初始化，并解释关键改动
 - 如果是"实现功能"类需求：仅在天衢支持的能力范围内完成实现；不支持则明确拒绝
 - 每次完成工作后，给出简短结果说明，并指出下一步需要用户做什么（如果需要）
