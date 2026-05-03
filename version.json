@@ -1,12 +1,12 @@
 {
-  "serverVersion": "1.0.0",
+  "serverVersion": "1.0.1",
   "frameworkVersion": "1.0.5",
-  "skillVersion": "1.0.0",
+  "skillVersion": "1.0.1",
   "capabilitiesVersion": "1.0.0",
   "integrationGuideVersion": "1.0.0",
-  "installerVersion": "1.0.0",
+  "installerVersion": "1.0.1",
   "kspVersion": "2.1.10-1.0.31",
   "minJavaVersion": 17,
-  "releaseDate": "2026-05-02",
-  "updateMessage": ""
+  "releaseDate": "2026-05-03",
+  "updateMessage": "优化了安装脚本，修复了 CheckUpdateTool 输出格式，补齐了协程通信正反例约束。"
 }
