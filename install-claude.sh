@@ -10,7 +10,7 @@
 
 set -e
 
-INSTALLER_VERSION="1.0.2"
+INSTALLER_VERSION="1.0.3"
 GITEE_BASE_URL="https://gitee.com/zhongte/TianQu"
 GITEE_RAW="${GITEE_BASE_URL}/raw/master"
 SKILL_URL="${GITEE_RAW}/.claude/skills/tianqu/SKILL.md"
@@ -71,6 +71,13 @@ if curl -fsSL --progress-bar "${JAR_URL}" -o "${MCP_DIR}/tianqu-mcp-server-all.j
 else
     echo -e "${RED}   ❌ JAR 下载失败，请检查网络或手动下载：${JAR_URL}${NC}"
     exit 1
+fi
+
+# ---------- 获取最新更新内容 ----------
+UPDATE_MSG=""
+if curl_out=$(curl -fsSL --max-time 3 "${GITEE_RAW}/version.json" 2>/dev/null); then
+    # 用简单的 python 脚本提取 updateMessage 字段，不依赖 jq
+    UPDATE_MSG=$(python3 -c "import sys, json; print(json.loads(sys.stdin.read()).get('updateMessage', ''))" <<< "$curl_out" 2>/dev/null)
 fi
 
 # ---------- 注册 MCP Server ----------
@@ -134,4 +141,10 @@ echo "   /tianqu 帮我用天衢写一个带预加载的商品详情页"
 echo "   /tianqu 帮我配置天衢的全局 404 降级拦截"
 echo ""
 echo -e "${YELLOW}💡 提示：天衢支持自动检查更新。如果在后续使用中提示有新版本，再次执行此 curl 命令并重启 Claude 即可完成升级。${NC}"
+
+if [ -n "$UPDATE_MSG" ]; then
+    echo ""
+    echo -e "${CYAN}✨ 本次天衢版本更新内容：${NC}"
+    echo -e "   ${UPDATE_MSG}"
+fi
 echo ""
