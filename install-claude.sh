@@ -11,9 +11,10 @@
 set -e
 
 INSTALLER_VERSION="1.0.0"
-GITEE_RAW="https://gitee.com/zhongte/TianQu/raw/master"
+GITEE_BASE_URL="https://gitee.com/zhongte/TianQu"
+GITEE_RAW="${GITEE_BASE_URL}/raw/master"
 SKILL_URL="${GITEE_RAW}/.claude/skills/tianqu/SKILL.md"
-JAR_URL="${GITEE_RAW}/bin/tianqu-mcp-server-all.jar"
+JAR_URL="${GITEE_BASE_URL}/releases/download/v1.0.4/tianqu-mcp-server-all.jar"
 
 SKILL_DIR=".claude/skills/tianqu"
 MCP_DIR=".claude/mcp"
