@@ -18,6 +18,7 @@ JAR_URL="${GITEE_BASE_URL}/releases/download/v1.0.4/tianqu-mcp-server-all.jar"
 
 SKILL_DIR=".claude/skills/tianqu"
 MCP_DIR=".claude/mcp"
+SETTINGS_FILE=".claude/settings.json"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -50,6 +51,7 @@ mkdir -p "${SKILL_DIR}"
 mkdir -p "${MCP_DIR}"
 echo "   ✅ .claude/skills/tianqu/  已就绪"
 echo "   ✅ .claude/mcp/            已就绪"
+echo "   ✅ .claude/settings.json   将自动写入/更新"
 
 # ---------- 下载 SKILL.md ----------
 echo ""
@@ -73,13 +75,42 @@ fi
 
 # ---------- 注册 MCP Server ----------
 echo ""
-echo -e "${YELLOW}🔧 注册 MCP Server（project 作用域）...${NC}"
-if claude mcp add tianqu --scope project -- java -jar ".claude/mcp/tianqu-mcp-server-all.jar" 2>&1; then
-    echo "   ✅ tianqu MCP Server 已注册到项目 .claude/settings.json"
+echo -e "${YELLOW}🔧 注册 MCP Server 到项目配置...${NC}"
+
+# 如果 settings.json 不存在，创建一个基础的空对象结构
+if [ ! -f "${SETTINGS_FILE}" ]; then
+    echo "{}" > "${SETTINGS_FILE}"
+fi
+
+# 使用 python3 安全地注入 MCP Server 配置到 settings.json
+if python3 -c '
+import json, sys
+
+settings_file = sys.argv[1]
+try:
+    with open(settings_file, "r") as f:
+        data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    data = {}
+
+data.setdefault("mcpServers", {})
+data["mcpServers"]["tianqu"] = {
+    "command": "java",
+    "args": ["-jar", ".claude/mcp/tianqu-mcp-server-all.jar"]
+}
+
+with open(settings_file, "w") as f:
+    json.dump(data, f, indent=2)
+' "${SETTINGS_FILE}" 2>/dev/null; then
+    echo "   ✅ tianqu MCP Server 已成功注册到项目 ${SETTINGS_FILE}"
 else
-    echo -e "${YELLOW}   ⚠️  MCP 注册命令返回非零状态，请检查上方输出。${NC}"
-    echo "   您也可以手动在项目 .claude/settings.json 的 mcpServers 节点中添加："
-    echo '   "tianqu": { "command": "java", "args": ["-jar", ".claude/mcp/tianqu-mcp-server-all.jar"] }'
+    echo -e "${YELLOW}   ⚠️  自动更新 ${SETTINGS_FILE} 失败，请手动添加 MCP 配置。${NC}"
+    echo "   请手动在项目 .claude/settings.json 中添加："
+    echo '   {'
+    echo '     "mcpServers": {'
+    echo '       "tianqu": { "command": "java", "args": ["-jar", ".claude/mcp/tianqu-mcp-server-all.jar"] }'
+    echo '     }'
+    echo '   }'
 fi
 
 # ---------- 完成 ----------
