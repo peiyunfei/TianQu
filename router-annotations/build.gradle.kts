@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
     `maven-publish`
 }
 
@@ -27,7 +29,7 @@ kotlin {
     
     sourceSets {
         commonMain.dependencies {
-            // No dependencies
+            implementation(compose.runtime)
         }
     }
 }

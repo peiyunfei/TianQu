@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.Serializable
@@ -15,6 +16,7 @@ import shijing.tianqu.runtime.getTypedArgs
 
 // 1. 定义序列化的 Data Class 参数对象
 @Serializable
+@Stable
 data class UserDetailArgs(
     val userId: Long,
     val username: String,

@@ -83,6 +83,7 @@ class GlobalRegistryGeneratorStrategy(private val resolver: Resolver) : CodeGene
 
         // 创建 GlobalRouteAggregator Object
         val typeSpec = TypeSpec.objectBuilder(className)
+            .addAnnotation(ClassName("androidx.compose.runtime", "Immutable"))
             .addProperty(routersProperty)
             .addProperty(servicesProperty)
             .build()

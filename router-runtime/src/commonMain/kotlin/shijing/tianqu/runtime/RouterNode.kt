@@ -1,6 +1,7 @@
 package shijing.tianqu.runtime
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.RouteType
 import shijing.tianqu.runtime.transition.TransitionStrategy
@@ -13,6 +14,7 @@ import shijing.tianqu.router.LaunchMode
 /**
  * 路由节点数据模型，由 KSP 处理器生成
  */
+@Immutable
 data class RouterNode(
     val path: String,
     val regexPattern: String,

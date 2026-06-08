@@ -77,6 +77,7 @@ class TransitionRegistryGeneratorStrategy(private val moduleName: String = "Defa
             // 加上特制聚合注解，给全局扫描提供入口
             .addAnnotation(ClassName(ModuleTransitionRegistry::class.java.packageName,
                 ModuleTransitionRegistry::class.simpleName ?: ""))
+            .addAnnotation(ClassName("androidx.compose.runtime", "Immutable"))
             .addProperty(propertySpec)
             .build()
 

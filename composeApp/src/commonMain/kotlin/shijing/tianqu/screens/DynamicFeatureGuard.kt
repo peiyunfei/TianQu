@@ -1,5 +1,6 @@
 package shijing.tianqu.screens
 
+import androidx.compose.runtime.Stable
 import kotlinx.coroutines.delay
 import shijing.tianqu.router.GuardChain
 import shijing.tianqu.router.RouterContext
@@ -15,6 +16,7 @@ import shijing.tianqu.runtime.transition.FadeTransitionStrategy
  * 实现了 [NavigatorAwareRouterGuard] 后，框架会在 Navigator 创建完成后自动注入实例，
  * 接入方无需再在 App.kt 里手写 `dynamicGuard.navigator = navigator`。
  */
+@Stable
 class DynamicFeatureGuard : RouterGuard, NavigatorAwareRouterGuard {
 
     // 通过 NavigatorAwareRouterGuard.onNavigatorReady 由框架自动注入，外部不可访问

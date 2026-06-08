@@ -127,6 +127,7 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
             // 加上特制聚合注解，给全局扫描提供入口
             .addAnnotation(ClassName(ModuleRouterRegistry::class.java.packageName,
                 ModuleRouterRegistry::class.simpleName ?: ""))
+            .addAnnotation(ClassName("androidx.compose.runtime", "Immutable"))
             .addProperty(propertySpec)
             .build()
 

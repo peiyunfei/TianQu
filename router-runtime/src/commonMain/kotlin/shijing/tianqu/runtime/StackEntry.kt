@@ -1,5 +1,6 @@
 package shijing.tianqu.runtime
 
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,6 +15,7 @@ import kotlinx.coroutines.Deferred
  * 路由栈实体，实现 ViewModelStoreOwner 接口。
  * 极其重要！实现了这个接口，StackEntry 就拥有了掌管 ViewModel 生杀大权的能力。
  */
+@Stable
 data class StackEntry(
 
     // 包含路由路径、匹配正则和真正的 Composable 函数的静态节点（来自路由表）

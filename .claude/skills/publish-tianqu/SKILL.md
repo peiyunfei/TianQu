@@ -46,15 +46,15 @@ TIANQU_RUNTIME_VERSION
 
 先清理上次打包可能遗留的产物：
 ```bash
-rm -rf build/central-bundle build/tianqu-release.zip
+rm -rf build/central-bundle build/tianqu-{版本号}-central-bundle.zip
 ```
 
 然后执行打包：
 ```bash
-./gradlew publishAllPublicationsToCentralPortalBundleRepository
+./gradlew :router-annotations:publishAllPublicationsToCentralPortalBundleRepository :router-processor:publishAllPublicationsToCentralPortalBundleRepository :router-runtime:publishAllPublicationsToCentralPortalBundleRepository
 ```
 
-该命令会将所有模块的构件（pom、jar、aar、javadoc、sources 及对应 .asc 签名文件）打包到 `build/central-bundle/`。
+该命令会将所有模块的构件（pom、jar、aar、javadoc、sources 及对应 .asc 签名文件）打包到 `build/central-bundle/io/gitee/zhongte/` 下。
 
 等待命令执行完成，如果失败立即停止并告知用户错误信息。
 
@@ -63,12 +63,12 @@ rm -rf build/central-bundle build/tianqu-release.zip
 ### 第 3 步：压缩产物为 ZIP
 
 ```bash
-cd build/central-bundle && zip -r ../tianqu-release.zip .
+cd build/central-bundle && zip -r ../../tianqu-{版本号}-central-bundle.zip io/ -q
 ```
 
-> 只有在第 2 步完成清理后才执行压缩，避免旧版本文件被一起打进 ZIP。
+> **必须**进入 `central-bundle/` 目录后只打包 `io/` 子目录，不能使用 `.`——否则 ZIP 内路径会带有 `central-bundle/` 前缀，导致 Maven Central 校验时报 "File path is not valid" 错误。
 
-执行完成后确认 `build/tianqu-release.zip` 文件存在，并告知用户文件大小。
+执行完成后确认 ZIP 文件存在并告知用户完整路径和文件大小。
 
 ---
 
@@ -83,7 +83,7 @@ cd build/central-bundle && zip -r ../tianqu-release.zip .
 3. 点击 **"Upload a deployment bundle"**
 4. 填写发布信息：
    - **Deployment Name**：填写本次版本，例如 `TianQu 1.0.6`
-   - **File**：选择 `build/tianqu-release.zip`
+   - **File**：选择 `build/tianqu-{版本号}-central-bundle.zip`
 5. 点击 **"Upload"**
 
 ---

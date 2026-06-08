@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -19,6 +20,7 @@ import shijing.tianqu.runtime.LocalNavigator
 import shijing.tianqu.runtime.tianQuViewModelInject
 
 @InjectViewModel
+@Stable
 class CounterViewModel : ViewModel() {
     private val _count = MutableStateFlow(0)
     val count: StateFlow<Int> = _count.asStateFlow()

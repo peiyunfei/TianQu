@@ -85,6 +85,7 @@ class ServiceRegistryGeneratorStrategy(private val moduleName: String = "Default
             // 加上特制聚合注解，给全局扫描提供入口
             .addAnnotation(ClassName(ModuleServiceRegistry::class.java.packageName,
                 ModuleServiceRegistry::class.simpleName ?: ""))
+            .addAnnotation(ClassName("androidx.compose.runtime", "Immutable"))
             .addProperty(propertySpec)
             .build()
 
