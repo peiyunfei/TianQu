@@ -7,5 +7,5 @@ import androidx.compose.ui.backhandler.BackHandler as ComposeBackHandler
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 actual fun BackHandler(enabled: Boolean, onBack: () -> Unit) {
-    //ComposeBackHandler(enabled = enabled, onBack = onBack)
+    ComposeBackHandler(enabled = enabled, onBack = onBack)
 }

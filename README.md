@@ -2,11 +2,19 @@
 
 > **天衢**（tiān qú）出自《楚辞·九思·遭厄》：“蹑天衢兮长驱，踵九阳兮戏荡。”意为天上的大道，宽阔的通衢。寓意本框架为 Kotlin Multiplatform 跨平台开发提供一条平坦、宽广、畅通无阻的路由大道。
 
-天衢 是一个专为 **Kotlin Multiplatform (KMP)** 打造的**纯 Kotlin + 协程驱动**的现代路由框架，支持 Android、iOS 以及桌面端。它彻底摆脱了传统 Android 路由框架对 JVM ASM 字节码插桩的依赖与深层嵌套的回调地狱，全面拥抱挂起函数，为您提供无侵入、强解耦、类型安全以及功能极其丰富的跨模块导航与服务发现解决方案。
-
-## [重磅更新！天衢KMP路由框架进入AI时代：一句话完成接入与开发](https://juejin.cn/post/7635653259487313956)
+天衢 是一个专为 **Kotlin Multiplatform (KMP)** 打造的**纯 Kotlin + 协程驱动**的现代路由框架，支持 Android、iOS 以及鸿蒙。它彻底摆脱了传统 Android 路由框架对 JVM ASM 字节码插桩的依赖与深层嵌套的回调地狱，全面拥抱挂起函数，为您提供无侵入、强解耦、类型安全以及功能极其丰富的跨模块导航与服务发现解决方案。
 
 ## [点击查看实现原理](./文档)
+
+---
+
+## 📱 平台支持
+
+| 平台 | 状态 |
+|----|------|
+| Android | ✅ 支持 |
+| iOS | ✅ 支持 |
+| 鸿蒙 | ✅ 支持 |
 
 ---
 
@@ -47,7 +55,31 @@
 
 ## 📦 一、引入与配置
 
-目前可通过Maven Central 引入最新版 天衢 路由依赖：
+目前可通过 Maven Central 引入最新版天衢路由依赖。
+
+**⚠️ 注意：需要在 `settings.gradle.kts` 的 `pluginManagement` 和 `dependencyResolutionManagement` 中，将以下仓库添加到第一位**（鸿蒙所依赖的 Kotlin/CMP fork 版本仅存于此仓库）：
+
+```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        // 鸿蒙所依赖的 Kotlin/CMP 仅存于此仓库
+        maven("https://maven.eazytec-cloud.com/nexus/repository/maven-public/") // 必须放第一位
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        // 鸿蒙所依赖的 Kotlin/CMP 仅存于此仓库
+        maven("https://maven.eazytec-cloud.com/nexus/repository/maven-public/") // 必须放第一位
+        google()
+        mavenCentral()
+    }
+}
+```
 
 在项目根目录或 `gradle/libs.versions.toml` 中配置：
 
@@ -56,7 +88,7 @@
 tianqu-router-annotations = "1.0.7" # 替换为最新版本号
 tianqu-router-processor = "1.0.7"
 tianqu-router-runtime = "1.0.7"
-ksp = "2.1.10-1.0.31" # 请务必与您项目的 Kotlin 版本一致
+ksp = "2.2.21-2.0.4"
 
 [libraries]
 tianqu-router-annotations = { module = "io.gitee.zhongte:tianqu-router-annotations", version.ref = "tianqu-router-annotations" }
@@ -107,7 +139,7 @@ kotlin.sourceSets.commonMain {
 }
 
 // 【必填项】：确保所有 Kotlin 编译任务在 KSP 生成 metadata 之后执行
-tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>>().configureEach {
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
     if (name != "kspCommonMainKotlinMetadata") {
         dependsOn("kspCommonMainKotlinMetadata")
     }
@@ -154,7 +186,7 @@ kotlin.sourceSets.commonMain {
 }
 
 // 【必填项】：确保 KSP 任务优先执行
-tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>>().configureEach {
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
     if (name != "kspCommonMainKotlinMetadata") {
         dependsOn("kspCommonMainKotlinMetadata")
     }
@@ -163,87 +195,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>>().configureEach
 
 ---
 
-## 🤖 二、零代码：AI 辅助智能接入 (Claude Code & MCP)
-
-> 觉得 Gradle 配置繁琐？天衢提供了官方 **Claude Code Skill** 与 **MCP Server**，让您通过**一句话**完成从依赖接入到页面实现的全流程，并支持**自动感知版本更新**。
-
-### 🎯 一句话安装（推荐）
-
-在您的项目根目录执行以下命令，即可自动下载 Skill、MCP Server 并完成注册：
-
-```bash
-curl -fsSL https://gitee.com/zhongte/TianQu/raw/master/install-claude.sh | bash
-```
-
-> **前提条件：需要 Java 17+** 和已安装的 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)。安装完成后，在项目目录执行 `claude` 启动即可。
-
-### ✨ 配置完成后，您可以这样使用
-
-在终端启动 Claude Code（`claude`），输入：
-
-```
-接入天衢框架
-```
-Claude Code 就会帮你接入天衢框架，您不需要写任何代码。
-
-接入天衢框架后，您还可以直接描述需求：
-
-```
-天衢实现了哪些功能
-使用协程实现页面间通信
-实现栈顶复用或者栈内复用
-实现跨模块通信
-在商品模块用天衢写一个带有预加载的商品详情页
-配置天衢的全局 404 降级拦截
-```
-
-对于天衢支持的功能，您都可以在 Claude Code 里面输入一句话来实现，再也不需要自己写代码了。
-
-> 如果您让 Claude Code 实现某个天衢不支持的功能，它会明确提示"天衢暂不支持该能力"，不会偷偷用别的框架替代。
-
-更多 AI 辅助智能接入详情，请参考文章：[重磅更新！天衢KMP路由框架进入AI时代：一句话完成接入与开发](https://juejin.cn/post/7635653259487313956)
-
-### 🔄 自动更新机制
-
-天衢的 Claude Code 接入组件内置了**每日版本检查**机制：
-
-- 每次使用天衢相关指令时，AI 会自动检查是否有新版本（每天最多访问一次远端，其余时间使用本地缓存，不影响速度）
-- **发现新版本时**：AI 会主动询问您是否立即升级
-- **您同意后**：AI 自动执行升级命令，下载最新的 Skill 和 MCP Server
-- **升级完成后**：AI 会提示您**重启 Claude Code**（完全退出后重启），以加载新版本的 MCP Server 进程和 Skill 文件
-
-如果您不想等到自动检查，可以随时对 Claude Code 说：
-
-```
-强制检查天衢更新
-```
-
-AI 会立即忽略本地缓存，访问远端获取最新版本信息。
-
-版本信息由仓库根目录的 [`version.json`](./version.json) 维护，每次天衢新增功能或修复接入问题时同步更新。
-
-### 🔧 手动配置（可选）
-
-如果 `curl | bash` 在您的网络环境中不可用，也可以按以下步骤手动配置：
-
-**第一步：获取 MCP Server JAR**  
-从本仓库的 [`bin/tianqu-mcp-server-all.jar`](./bin/tianqu-mcp-server-all.jar) 下载，放到您项目的 `.claude/mcp/` 目录下。
-
-**第二步：注册 MCP Server**  
-在您项目根目录执行（或手动编辑 `.claude/settings.json`）：
-
-```bash
-claude mcp add tianqu --scope project -- java -jar .claude/mcp/tianqu-mcp-server-all.jar
-```
-
-**第三步：添加 Skill 文件**  
-创建 `.claude/skills/tianqu/SKILL.md`，内容从本仓库 [`.claude/skills/tianqu/SKILL.md`](./.claude/skills/tianqu/SKILL.md) 复制即可。
-
-**后续升级**：重新执行一遍第一步的 `curl | bash` 命令，即可自动覆盖升级 Skill 与 JAR，升级后**重启 Claude Code** 加载新版本。
-
----
-
-## 🚀 三、基础路由导航与全局初始化
+## 🚀 二、基础路由导航与全局初始化
 
 ### 1. 全局初始化 RouterHost
 在 Compose Multiplatform 的共享 UI 层 (`App.kt`) 根节点，调用 `rememberAppTianQuState` 完成框架装配，并使用 `RouterHost` 承载。框架会自动完成跨模块服务初始化、路由事件监听和返回键拦截，业务只需声明自己的策略。
@@ -357,6 +309,18 @@ val navigator = rememberAppTianQuState {
     enableBackHandler = false // 关闭框架默认的返回键拦截
 }
 ```
+**⚠️ 注意：对于鸿蒙来说，需要在 `harmonyApp/entry/src/main/ets/pages/Index.ets` 重写 `onBackPress` ，不是`onBackPressed`，方法名别写错。一般来说，Index.ets是在创建项目的时候自动生成的，但自动生成的`onBackPress`方法可能会出错，可能会生成`onBackPressed`，多加了`ed`，一定要检查`onBackPress`方法是否正确。**
+```ets
+// 这是正确的方法
+onBackPress(): boolean | void {
+    return this.controller ? this.controller.onBackPress() : false;
+}
+
+// 这是错误的，编译器自动生成的可能会是onBackPressed
+onBackPressed(): boolean {
+    return this.controller ? this.controller.onBackPress() : false;
+  }
+```
 
 如需在某个**深层子页面**拦截返回（例如表单页阻止意外返回），直接在该页面调用 `BackHandler` 即可，它会优先于全局拦截消费返回事件：
 
@@ -456,7 +420,7 @@ KSP 会自动将您的自定义动画收集到聚合器中，跳转时无缝衔�
 
 ---
 
-## 🎯 四、传参大满贯：各种传参场景与代码示例
+## 🎯 三、传参大满贯：各种传参场景与代码示例
 
 天衢 路由全面覆盖了不同场景的数据传递需求，不再有传统框架传参类型容易丢失的问题。
 
@@ -602,7 +566,7 @@ fun TypeSafeScreen(context: RouterContext) {
 
 ---
 
-## ⚡️ 五、极致性能：非阻塞并发数据预加载 (Route Pre-fetching)
+## ⚡️ 四、极致性能：非阻塞并发数据预加载 (Route Pre-fetching)
 
 传统的页面开发模式往往面临两难选择：要么**先跳转再请求**（进入页面后有一段骨架屏/Loading空白期等待数据），要么**先请求再跳转**（用户点击按钮后界面卡住无响应，等数据回来了才突然跳转）。
 
@@ -671,7 +635,7 @@ fun UserDetailScreen(context: RouterContext) {
 
 ---
 
-## 🔄 六、页面结果回传 (页面间双向通信)
+## 🔄 五、页面结果回传 (页面间双向通信)
 
 处理“选择联系人”、“修改设置后返回数据”等需求时，天衢 提供了极为优雅的挂起式协程解决方案。
 
@@ -742,7 +706,7 @@ Button(onClick = {
 
 ---
 
-## 🔌 七、跨模块解耦：服务发现 (Service Discovery)
+## 🔌 六、跨模块解耦：服务发现 (Service Discovery)
 
 路由不仅为了页面跳转，也是为了跨模块间的**接口调用与反向依赖注入**。上层 `app` 可以调用底层 `feature` 模块的具体实现，而无需互相强依赖。
 
@@ -802,7 +766,7 @@ fun fetchUserData() {
 
 ---
 
-## 🧬 八、ViewModel 与页面生命周期深度绑定
+## 🧬 七、ViewModel 与页面生命周期深度绑定
 
 原生的 `viewModel()` 在纯 Compose Multiplatform 项目中往往缺乏路由弹栈感知能力。天衢 提供了与**单次页面路由同生共死**的专有 ViewModel，并支持三种不同的获取方式，满足各种复杂场景的需求。
 
@@ -909,7 +873,7 @@ fun DemoViewModelScreen(context: RouterContext) {
 
 ---
 
-## 🧩 九、协程驱动的动态按需懒加载 (Dynamic Feature)
+## 🧩 八、协程驱动的动态按需懒加载 (Dynamic Feature)
 
 在大型项目中，为了减小包体积或加快初始启动速度，某些业务模块可以设计为**动态下载与按需加载**。在传统路由中，这往往需要复杂的异步回调与占位页面。
 
@@ -992,7 +956,7 @@ fun HomeScreen(context: RouterContext) {
 
 ---
 
-## 🎨 十、其他极客能力全景公开
+## 🎨 九、其他极客能力全景公开
 
 ### 1. 多返回栈嵌套管理与 Tab 状态持久化
 App 主页往往包含底部的多个 Tab。天衢 底层深度打通了 `SaveableStateHolder`，完美解决“切换 Tab 重新渲染导致输入内容与滚动条丢失”的问题。这是一种原生的“单宿主+多挂载点”轻量实现：

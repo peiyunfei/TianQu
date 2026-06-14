@@ -3,7 +3,7 @@
 本文件为 Claude Code (claude.ai/code) 在此仓库中工作时提供指引。
 
 ## 项目简介
-**天衢（TianQu）** 是一个专为 **Kotlin Multiplatform (KMP)** 打造的、纯协程驱动的现代路由框架，支持 Android、iOS 和桌面端。框架以 `suspend` 函数全面取代传统回调，彻底摆脱 JVM ASM 字节码插桩依赖。
+**天衢（TianQu）** 是一个专为 **Kotlin Multiplatform (KMP)** 打造的、纯协程驱动的现代路由框架，支持 Android、iOS 和鸿蒙。框架以挂起函数全面取代传统回调，彻底摆脱 JVM ASM 字节码插桩依赖。
 
 如果需要知道接入方式和实现的功能，请查看[README.md](README.md)。
 

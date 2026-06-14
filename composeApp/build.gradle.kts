@@ -125,6 +125,12 @@ ksp {
     arg("tianqu.isApp", "true")
 }
 
+// lifecycle-common-jvm 在 upstream 和 ohos fork 间存在 Duplicate class，
+// 排除 upstream 版本，由 org.jetbrains.androidx.lifecycle fork 传递依赖提供
+configurations.configureEach {
+    exclude(group = "androidx.lifecycle", module = "lifecycle-common-jvm")
+}
+
 dependencies {
     debugImplementation(compose.uiTooling)
 

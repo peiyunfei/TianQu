@@ -60,7 +60,7 @@ struct Index {
     }
   }
 
-  onBackPressed(): boolean {
+  onBackPress(): boolean | void {
     return this.controller ? this.controller.onBackPress() : false;
   }
 }
