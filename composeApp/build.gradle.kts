@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -25,6 +26,36 @@ kotlin {
             isStatic = true
         }
     }
+
+    listOf(ohosArm64()).forEach { ohosTarget ->
+        ohosTarget.binaries.sharedLib {
+            baseName = "kn"
+            if (buildType == NativeBuildType.RELEASE) {
+                optimized = false
+            }
+            export(libs.compose.multiplatform.export)
+            linkerOpts("-lz")
+            linkerOpts(
+                "-lnative_drawing",
+                "-limage_source",
+                "-lpixelmap",
+                "-lpixelmap_ndk.z",
+                "-lnative_window",
+                "-lace_napi.z",
+                "-lhilog_ndk.z",
+                "-lhitrace_ndk.z",
+                "-luv",
+                "-lunwind",
+                "-licu",
+            )
+        }
+        ohosTarget.compilations.getByName("main") {
+            val resource by cinterops.creating {
+                defFile(file("src/ohosMain/cinterop/resource.def"))
+                includeDirs(file("src/ohosMain/cinterop/include"))
+            }
+        }
+    }
     
     sourceSets {
         androidMain.dependencies {
@@ -38,7 +69,6 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.material)
-            implementation(compose.materialIconsExtended)
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
@@ -52,6 +82,14 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+
+        val ohosMain by creating {
+            dependsOn(commonMain.get())
+        }
+        ohosMain.dependencies {
+            api(libs.compose.multiplatform.export)
+        }
+        sourceSets["ohosArm64Main"].dependsOn(ohosMain)
     }
 }
 
@@ -100,8 +138,37 @@ kotlin.sourceSets.commonMain {
 }
 
 // 确保各平台编译任务依赖 KSP commonMain 元数据生成任务
-tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>>().configureEach {
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
     if (name != "kspCommonMainKotlinMetadata") {
         dependsOn("kspCommonMainKotlinMetadata")
+    }
+}
+
+// 发布 KMP 产物到鸿蒙 DevEco 工程目录
+val harmonyAppDir: File = run {
+    val cliPath = project.findProperty("harmonyAppPath") as String?
+    if (cliPath.isNullOrBlank()) rootProject.file("harmonyApp") else file(cliPath)
+}
+
+fun String.capitalizeFirst(): String = replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+arrayOf("debug", "release").forEach { type ->
+    tasks.register<Copy>("publish${type.capitalizeFirst()}BinariesToHarmonyApp") {
+        group = "harmony"
+        dependsOn(
+            "link${type.capitalizeFirst()}SharedOhosArm64",
+        )
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        into(harmonyAppDir)
+        from("build/bin/ohosArm64/${type}Shared/libkn_api.h") {
+            into("entry/src/main/cpp/include/arm64-v8a/")
+        }
+        from("build/bin/ohosArm64/${type}Shared/libkn.so") {
+            into("entry/libs/arm64-v8a/")
+        }
+        val resourcesPkg = "${rootProject.name.lowercase()}.${project.name.lowercase()}.generated.resources"
+        from("src/commonMain/composeResources") {
+            into("entry/src/main/resources/rawfile/composeResources/$resourcesPkg/")
+        }
     }
 }

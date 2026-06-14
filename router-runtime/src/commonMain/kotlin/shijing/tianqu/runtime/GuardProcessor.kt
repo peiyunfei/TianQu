@@ -21,10 +21,10 @@ object GuardProcessor {
 
         // 定义责任链内部实现
         val chain = object : GuardChain {
-            override suspend fun proceed(ctx: RouterContext): Boolean {
+            override suspend fun proceed(context: RouterContext): Boolean {
                 if (index < matchedGuards.size) {
                     val guard = matchedGuards[index++]
-                    return guard.canActivate(ctx, this)
+                    return guard.canActivate(context, this)
                 }
                 return true
             }

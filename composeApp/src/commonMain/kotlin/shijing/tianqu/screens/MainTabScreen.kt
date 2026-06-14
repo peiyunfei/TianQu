@@ -1,9 +1,6 @@
 package shijing.tianqu.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,13 +29,13 @@ fun MainTabScreen(context: RouterContext) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "首页") },
+                    icon = { Text("🏠") },
                     label = { Text("首页") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Filled.Person, contentDescription = "我的") },
+                    icon = { Text("👤") },
                     label = { Text("我的") }
                 )
             }

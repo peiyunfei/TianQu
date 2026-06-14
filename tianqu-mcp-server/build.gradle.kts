@@ -3,8 +3,8 @@
 // 打包为 Fat JAR 后，接入方通过 java -jar 启动，无需任何额外环境
 
 plugins {
-    kotlin("jvm") version "2.1.10"
-    kotlin("plugin.serialization") version "2.1.10"
+    kotlin("jvm")
+    kotlin("plugin.serialization")
     application
     // Shadow 插件：将所有依赖打包进一个独立的 Fat JAR
     id("com.github.johnrengelman.shadow") version "8.1.1"

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
@@ -21,21 +23,20 @@ publishing {
 kotlin {
     androidTarget {
         publishLibraryVariants("release", "debug")
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
-        }
-    }
-    jvm {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
     iosArm64()
     iosSimulatorArm64()
+
+    listOf(ohosArm64()).forEach { ohosTarget ->
+        ohosTarget.binaries.sharedLib {
+            baseName = "kn"
+            export(libs.compose.multiplatform.export)
+            linkerOpts("-lz")
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -47,6 +48,14 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
         }
+
+        val ohosMain by creating {
+            dependsOn(commonMain.get())
+            dependencies {
+                implementation(libs.compose.ui.backhandler)
+            }
+        }
+        sourceSets["ohosArm64Main"].dependsOn(ohosMain)
     }
 }
 

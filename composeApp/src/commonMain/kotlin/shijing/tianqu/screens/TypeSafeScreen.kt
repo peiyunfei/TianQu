@@ -1,8 +1,6 @@
 package shijing.tianqu.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -39,7 +37,7 @@ fun TypeSafeScreen(context: RouterContext) {
                 title = { Text("类型安全传参演示") },
                 navigationIcon = {
                     IconButton(onClick = { navigator.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Text("←")
                     }
                 }
             )
