@@ -27,6 +27,12 @@ kotlin {
             implementation(project(":router-runtime"))
             implementation(project(":router-annotations"))
         }
+
+        val iosMain by creating {
+            dependsOn(commonMain.get())
+        }
+        sourceSets["iosArm64Main"].dependsOn(iosMain)
+        sourceSets["iosSimulatorArm64Main"].dependsOn(iosMain)
     }
 }
 

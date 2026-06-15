@@ -49,6 +49,12 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
         }
 
+        val iosMain by creating {
+            dependsOn(commonMain.get())
+        }
+        sourceSets["iosArm64Main"].dependsOn(iosMain)
+        sourceSets["iosSimulatorArm64Main"].dependsOn(iosMain)
+
         val ohosMain by creating {
             dependsOn(commonMain.get())
             dependencies {
