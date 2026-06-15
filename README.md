@@ -85,18 +85,56 @@ dependencyResolutionManagement {
 
 ```toml
 [versions]
-tianqu-router-annotations = "1.0.7" # 替换为最新版本号
-tianqu-router-processor = "1.0.7"
-tianqu-router-runtime = "1.0.7"
+tianqu-router-annotations = "1.0.8" # 替换为最新版本号
+tianqu-router-processor = "1.0.8"
+tianqu-router-runtime = "1.0.8"
+androidx-lifecycle = "2.9.4-0.3.0"
+androidx-testExt = "1.3.0"
+composeMultiplatform = "1.9.2-0.3.0"
+junit = "4.13.2"
+kotlin = "2.2.21-0.3.0"
+kotlinx-serialization = "1.9.1-0.3.0"
 ksp = "2.2.21-2.0.4"
+compose-ui-backhandler = "1.9.2-0.3.0-12"
+kotlinpoet = "2.0.0"
+material = "1.10.0"
+kotlinx-coroutines = "1.10.2-0.3.0"
+atomicFu = "0.31.0-0.3.0"
 
 [libraries]
 tianqu-router-annotations = { module = "io.gitee.zhongte:tianqu-router-annotations", version.ref = "tianqu-router-annotations" }
 tianqu-router-processor = { module = "io.gitee.zhongte:tianqu-router-processor", version.ref = "tianqu-router-processor" }
 tianqu-router-runtime = { module = "io.gitee.zhongte:tianqu-router-runtime", version.ref = "tianqu-router-runtime" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+
+# Serialization
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+# Coroutines & AtomicFu (ohos fork versions)
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+atomicFu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicFu" }
+
+# OHOS: Compose export artifact for sharedLib linking
+compose-multiplatform-export = { module = "org.jetbrains.compose.export:export", version.ref = "composeMultiplatform" }
+# BackHandler multiplatform
+compose-ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "compose-ui-backhandler" }
+# KSP API and Code Generation
+ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
+kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
+kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 
 [plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ```
 
 ### 1. 业务子模块配置 (Feature Module)
@@ -486,7 +524,7 @@ fun ProfileScreen(context: RouterContext) {
 在项目根目录或 `gradle/libs.versions.toml` 中配置：
 ```toml
 [versions]
-kotlinx-serialization = "1.6.3"
+kotlinx-serialization = "1.9.1-0.3.0"
 
 [libraries]
 # 序列化
