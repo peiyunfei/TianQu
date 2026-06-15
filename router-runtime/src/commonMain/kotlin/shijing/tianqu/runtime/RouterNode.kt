@@ -4,10 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import shijing.tianqu.router.RouteType
 import shijing.tianqu.runtime.transition.TransitionStrategy
-
-/**
- * 路由节点数据模型，由 KSP 处理器生成
- */
 import shijing.tianqu.router.LaunchMode
 
 /**
