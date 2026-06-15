@@ -1,4 +1,6 @@
-package shijing.tianqu.router
+package shijing.tianqu.runtime
+
+import androidx.compose.runtime.Immutable
 
 /**
  * 路由上下文，包含当前导航的完整信息
@@ -9,6 +11,7 @@ package shijing.tianqu.router
  * @param queryParams URL 中的查询参数，如 ?ref=home 提取的 ref=["home"]
  * @param extra 额外传递的复杂对象参数（不适合或者不方便放在URL中的数据，比如 Bitmap、自定义数据类实例等）
  */
+@Immutable
 data class RouterContext(
     val url: String,
     val pathParams: Map<String, String> = emptyMap(),

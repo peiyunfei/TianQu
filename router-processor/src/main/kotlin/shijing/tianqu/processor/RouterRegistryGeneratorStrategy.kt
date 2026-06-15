@@ -7,7 +7,6 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.writeTo
-import shijing.tianqu.router.RouterContext
 import shijing.tianqu.router.Router
 import shijing.tianqu.router.aggregation.ModuleRouterRegistry
 
@@ -19,7 +18,7 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
         val functions = symbols
         val packageName = "shijing.tianqu.router.generated"
         val className = "RouterRegistry_$moduleName"
-
+        val routerContextName = "shijing.tianqu.runtime.RouterContext"
         // 引入 Compose 的注解
         val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
         // 引入 RouteContext
@@ -84,7 +83,7 @@ class RouterRegistryGeneratorStrategy(private val moduleName: String = "Default"
             // 只有当目标函数接受 RouterContext 参数时才传递
 
             val hasContextParam = func.parameters.any {
-                it.type.resolve().declaration.qualifiedName?.asString() == RouterContext::class.qualifiedName
+                it.type.resolve().declaration.qualifiedName?.asString() == routerContextName
             }
             
             val composableCall = if (hasContextParam) {

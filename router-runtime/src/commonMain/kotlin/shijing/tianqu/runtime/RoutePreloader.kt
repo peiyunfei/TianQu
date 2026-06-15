@@ -7,7 +7,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.Deferred
-import shijing.tianqu.router.RouterContext
+import shijing.tianqu.runtime.RouterContext
 
 /**
  * 路由数据预加载器接口

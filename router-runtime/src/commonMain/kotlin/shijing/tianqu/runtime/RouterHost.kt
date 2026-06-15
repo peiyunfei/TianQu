@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import shijing.tianqu.router.RouterGuard
+import shijing.tianqu.runtime.RouterGuard
 
 import kotlinx.coroutines.CoroutineScope
 import shijing.tianqu.runtime.handler.RouterHandler

@@ -92,7 +92,7 @@ typedef struct {
 } libkn_kref_shijing_tianqu_router_generated_TransitionStrategyRegistry_ComposeApp;
 typedef struct {
   libkn_KNativePtr pinned;
-} libkn_kref_shijing_tianqu_router_RouterContext;
+} libkn_kref_shijing_tianqu_runtime_RouterContext;
 typedef struct {
   libkn_KNativePtr pinned;
 } libkn_kref_shijing_tianqu_screens_RotateScaleTransitionStrategy;
@@ -401,7 +401,7 @@ typedef struct {
             struct {
               libkn_KType* (*_type)(void);
               libkn_kref_shijing_tianqu_screens_DynamicFeatureGuard (*DynamicFeatureGuard)();
-              libkn_KBoolean (*matches)(libkn_kref_shijing_tianqu_screens_DynamicFeatureGuard thiz, libkn_kref_shijing_tianqu_router_RouterContext context);
+              libkn_KBoolean (*matches)(libkn_kref_shijing_tianqu_screens_DynamicFeatureGuard thiz, libkn_kref_shijing_tianqu_runtime_RouterContext context);
               void (*onNavigatorReady)(libkn_kref_shijing_tianqu_screens_DynamicFeatureGuard thiz, libkn_kref_shijing_tianqu_runtime_Navigator navigator);
             } DynamicFeatureGuard;
             struct {
@@ -447,7 +447,7 @@ typedef struct {
               libkn_KInt (*hashCode)(libkn_kref_shijing_tianqu_screens_UserDetailArgs thiz);
               const char* (*toString)(libkn_kref_shijing_tianqu_screens_UserDetailArgs thiz);
             } UserDetailArgs;
-            void (*DemoAnimScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*DemoAnimScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter)();
@@ -461,7 +461,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter)();
-            void (*DemoDialogScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*DemoDialogScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter_)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter_)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter_)();
@@ -475,7 +475,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter_)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter_)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter_)();
-            void (*DemoPreloadScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*DemoPreloadScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter__)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter__)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter__)();
@@ -530,7 +530,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter_____)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter_____)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter_____)();
-            void (*FavScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*FavScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter______)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter______)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter______)();
@@ -544,7 +544,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter______)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter______)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter______)();
-            void (*HomeScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*HomeScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter_______)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter_______)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter_______)();
@@ -558,7 +558,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter_______)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter_______)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter_______)();
-            void (*MainTabScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*MainTabScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter________)();
@@ -572,7 +572,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter________)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter________)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter________)();
-            void (*ProfileScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*ProfileScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter_________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter_________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter_________)();
@@ -586,7 +586,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter_________)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter_________)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter_________)();
-            void (*SettingsScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*SettingsScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter__________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter__________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter__________)();
@@ -600,7 +600,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter__________)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter__________)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter__________)();
-            void (*SharedElementDemoScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*SharedElementDemoScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter___________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter___________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter___________)();
@@ -614,7 +614,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter___________)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter___________)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter___________)();
-            void (*TestSingleTaskMiddleScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*TestSingleTaskMiddleScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter____________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter____________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter____________)();
@@ -628,7 +628,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter____________)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter____________)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter____________)();
-            void (*TestSingleTaskScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*TestSingleTaskScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter_____________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter_____________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter_____________)();
@@ -642,7 +642,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter_____________)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter_____________)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter_____________)();
-            void (*TestSingleTopScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*TestSingleTopScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter______________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter______________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter______________)();
@@ -656,7 +656,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter______________)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter______________)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter______________)();
-            void (*TypeSafeScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*TypeSafeScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter_______________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter_______________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter_______________)();
@@ -670,7 +670,7 @@ typedef struct {
             libkn_KInt (*shijing_tianqu_screens_UserDetailData$stableprop_getter_______________)();
             libkn_KInt (*shijing_tianqu_screens_UserDetailPreloader$stableprop_getter_______________)();
             libkn_KInt (*shijing_tianqu_screens_UserProfile$stableprop_getter_______________)();
-            void (*UserScreen)(libkn_kref_shijing_tianqu_router_RouterContext context);
+            void (*UserScreen)(libkn_kref_shijing_tianqu_runtime_RouterContext context);
             libkn_KInt (*shijing_tianqu_screens_CounterViewModel$stableprop_getter________________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel$stableprop_getter________________)();
             libkn_KInt (*shijing_tianqu_screens_DemoPreloadViewModel_UiState$stableprop_getter________________)();

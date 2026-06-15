@@ -1,6 +1,6 @@
 package shijing.tianqu.runtime.handler
 
-import shijing.tianqu.router.RouterContext
+import shijing.tianqu.runtime.RouterContext
 import shijing.tianqu.runtime.Navigator
 
 /**

@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import shijing.tianqu.runtime.BackHandler
 import shijing.tianqu.router.RouteType
 import shijing.tianqu.router.Router
-import shijing.tianqu.router.RouterContext
+import shijing.tianqu.runtime.RouterContext
 import shijing.tianqu.runtime.LocalNavigator
 
 @Router(

@@ -1,7 +1,7 @@
 package shijing.tianqu.runtime
 
 import kotlin.reflect.KClass
-import shijing.tianqu.router.RouterGuard
+import shijing.tianqu.runtime.RouterGuard
 import shijing.tianqu.runtime.handler.RouterHandler
 
 /**

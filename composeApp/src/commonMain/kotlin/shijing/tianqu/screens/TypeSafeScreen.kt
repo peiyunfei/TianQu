@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.Serializable
 import shijing.tianqu.router.Router
-import shijing.tianqu.router.RouterContext
+import shijing.tianqu.runtime.RouterContext
 import shijing.tianqu.runtime.LocalNavigator
 import shijing.tianqu.runtime.getTypedArgs
 

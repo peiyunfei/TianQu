@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import shijing.tianqu.router.Router
-import shijing.tianqu.router.RouterContext
+import shijing.tianqu.runtime.RouterContext
 import shijing.tianqu.runtime.LocalNavigator
 
 @Router(path = "/featureb/home")
